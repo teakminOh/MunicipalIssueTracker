@@ -1,0 +1,16 @@
+@page "/Error"
+@using System.Diagnostics
+
+<PageTitle>Error - Municipal Issue Tracker</PageTitle>
+
+<h3 class="rz-mb-4">An error occurred</h3>
+
+<RadzenAlert AlertStyle="AlertStyle.Danger" ShowIcon="true" Variant="Variant.Flat">
+    An unexpected error occurred while processing your request. Please try again or contact the administrator.
+</RadzenAlert>
+
+<RadzenButton Text="Go to Dashboard" Icon="home" Click="@(() => Nav.NavigateTo("/"))" class="rz-mt-4" />
+
+@code {
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+}

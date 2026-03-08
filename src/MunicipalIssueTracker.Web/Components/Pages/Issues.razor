@@ -1,0 +1,98 @@
+@page "/issues"
+@rendermode InteractiveServer
+@inject IssueService IssueService
+@inject NavigationManager Nav
+
+<PageTitle>Issues - Municipal Issue Tracker</PageTitle>
+
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" class="rz-mb-4">
+    <h3 class="rz-mb-0">Issues</h3>
+    <RadzenButton Text="New Issue" Icon="add" Click="@(() => Nav.NavigateTo("/issues/create"))" class="rz-ml-auto" />
+</RadzenStack>
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="8" class="rz-mb-4" Wrap="FlexWrap.Wrap">
+    <RadzenDropDown @bind-Value="_filterStatusId" Data="@_statuses" TextProperty="Name" ValueProperty="StatusId"
+                    Placeholder="All Statuses" AllowClear="true" Change="@(async _ => await LoadIssues())" Style="width:180px;" />
+    <RadzenDropDown @bind-Value="_filterCategoryId" Data="@_categories" TextProperty="Name" ValueProperty="CategoryId"
+                    Placeholder="All Categories" AllowClear="true" Change="@(async _ => await LoadIssues())" Style="width:180px;" />
+    <RadzenDropDown @bind-Value="_filterDistrictId" Data="@_districts" TextProperty="Name" ValueProperty="DistrictId"
+                    Placeholder="All Districts" AllowClear="true" Change="@(async _ => await LoadIssues())" Style="width:180px;" />
+    <RadzenDropDown @bind-Value="_filterPriority" Data="@_priorities" TextProperty="Text" ValueProperty="Value"
+                    Placeholder="All Priorities" AllowClear="true" Change="@(async _ => await LoadIssues())" Style="width:180px;" />
+</RadzenStack>
+
+<RadzenDataGrid TItem="Issue" Data="@_issues" AllowSorting="true" AllowPaging="true" PageSize="10"
+                AllowColumnResize="true" RowClick="@(args => Nav.NavigateTo($"/issues/{args.Data.IssueId}"))">
+    <Columns>
+        <RadzenDataGridColumn TItem="Issue" Property="IssueId" Title="ID" Width="60px" />
+        <RadzenDataGridColumn TItem="Issue" Property="Title" Title="Title" />
+        <RadzenDataGridColumn TItem="Issue" Title="Category" Width="140px">
+            <Template Context="issue">@issue.Category?.Name</Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Issue" Title="Status" Width="120px">
+            <Template Context="issue">
+                <RadzenBadge Text="@issue.Status?.Name" BadgeStyle="@GetStatusBadgeStyle(issue.Status?.Name)" />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Issue" Title="Priority" Width="100px" SortProperty="Priority">
+            <Template Context="issue">
+                <RadzenBadge Text="@issue.Priority.ToString()" BadgeStyle="@GetPriorityBadgeStyle(issue.Priority)" />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Issue" Title="District" Width="120px">
+            <Template Context="issue">@issue.District?.Name</Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Issue" Title="Assigned To" Width="150px">
+            <Template Context="issue">@(issue.AssignedTo?.DisplayName ?? "Unassigned")</Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Issue" Property="CreatedAt" Title="Created" Width="130px" FormatString="{0:yyyy-MM-dd}" />
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private List<Issue> _issues = new();
+    private List<Status> _statuses = new();
+    private List<Category> _categories = new();
+    private List<District> _districts = new();
+
+    private int? _filterStatusId;
+    private int? _filterCategoryId;
+    private int? _filterDistrictId;
+    private IssuePriority? _filterPriority;
+
+    private record PriorityItem(string Text, IssuePriority Value);
+    private readonly List<PriorityItem> _priorities = Enum.GetValues<IssuePriority>()
+        .Select(p => new PriorityItem(p.ToString(), p)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _statuses = await IssueService.GetStatusesAsync();
+        _categories = await IssueService.GetCategoriesAsync();
+        _districts = await IssueService.GetDistrictsAsync();
+        await LoadIssues();
+    }
+
+    private async Task LoadIssues()
+    {
+        _issues = await IssueService.GetIssuesAsync(_filterStatusId, _filterCategoryId, _filterDistrictId, priority: _filterPriority);
+    }
+
+    private static BadgeStyle GetStatusBadgeStyle(string? status) => status switch
+    {
+        "Reported" => BadgeStyle.Warning,
+        "Confirmed" => BadgeStyle.Info,
+        "In Progress" => BadgeStyle.Primary,
+        "Resolved" => BadgeStyle.Success,
+        "Closed" => BadgeStyle.Light,
+        _ => BadgeStyle.Secondary
+    };
+
+    private static BadgeStyle GetPriorityBadgeStyle(IssuePriority priority) => priority switch
+    {
+        IssuePriority.Critical => BadgeStyle.Danger,
+        IssuePriority.High => BadgeStyle.Warning,
+        IssuePriority.Medium => BadgeStyle.Info,
+        IssuePriority.Low => BadgeStyle.Light,
+        _ => BadgeStyle.Secondary
+    };
+}

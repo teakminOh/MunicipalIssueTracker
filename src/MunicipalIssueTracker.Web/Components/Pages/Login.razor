@@ -1,0 +1,82 @@
+@page "/login"
+@layout MunicipalIssueTracker.Web.Components.Layout.MainLayout
+@rendermode InteractiveServer
+@inject NavigationManager Nav
+@inject NotificationService Notification
+
+<PageTitle>Login - Municipal Issue Tracker</PageTitle>
+
+<div style="display:flex; justify-content:center; align-items:center; min-height:60vh;">
+    <RadzenCard Style="width:400px;">
+        <h4 class="rz-mb-4">Login</h4>
+        <RadzenTemplateForm TItem="LoginModel" Data="@_model" Submit="@OnLogin">
+            <RadzenStack Gap="16">
+                <RadzenFormField Text="Email">
+                    <RadzenTextBox @bind-Value="_model.Email" Style="width:100%;" />
+                </RadzenFormField>
+                <RadzenFormField Text="Password">
+                    <RadzenPassword @bind-Value="_model.Password" Style="width:100%;" />
+                </RadzenFormField>
+
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Danger" ShowIcon="true" Variant="Variant.Flat" Size="AlertSize.Small">
+                        @_error
+                    </RadzenAlert>
+                }
+
+                <RadzenButton ButtonType="ButtonType.Submit" Text="Login" Style="width:100%;" IsBusy="@_loading" />
+            </RadzenStack>
+        </RadzenTemplateForm>
+
+        <hr />
+        <h6>Demo Accounts</h6>
+        <div class="rz-text-body2">
+            <p><strong>Admin:</strong> admin@municipality.se / Admin123!</p>
+            <p><strong>Operator:</strong> erik@municipality.se / Operator123!</p>
+            <p><strong>Viewer:</strong> anna@municipality.se / Viewer123!</p>
+        </div>
+    </RadzenCard>
+</div>
+
+@code {
+    private LoginModel _model = new();
+    private string? _error;
+    private bool _loading;
+
+    private async Task OnLogin()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            using var http = new HttpClient { BaseAddress = new Uri(Nav.BaseUri) };
+            var response = await http.PostAsJsonAsync("/api/auth/login", new { _model.Email, _model.Password });
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Force reload to pick up the cookie
+                Nav.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                _error = "Invalid email or password.";
+            }
+        }
+        catch
+        {
+            _error = "Login failed. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private class LoginModel
+    {
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+}

@@ -1,0 +1,261 @@
+@page "/issues/{IssueId:int}"
+@rendermode InteractiveServer
+@inject IssueService IssueService
+@inject AuditService AuditService
+@inject NavigationManager Nav
+@inject NotificationService Notification
+@inject IJSRuntime JS
+@inject IFileStorage FileStorage
+
+<PageTitle>Issue #@IssueId - Municipal Issue Tracker</PageTitle>
+
+@if (_issue == null)
+{
+    <RadzenText Text="Loading..." />
+}
+else
+{
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" class="rz-mb-4">
+        <h3 class="rz-mb-0">Issue #@_issue.IssueId: @_issue.Title</h3>
+        <RadzenButton Text="Edit" Icon="edit" Click="@(() => Nav.NavigateTo($"/issues/{_issue.IssueId}/edit"))" class="rz-ml-auto" />
+        <RadzenButton Text="Back" Icon="arrow_back" ButtonStyle="ButtonStyle.Light" Click="@(() => Nav.NavigateTo("/issues"))" />
+    </RadzenStack>
+
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="16" Wrap="FlexWrap.Wrap">
+        @* Left: Issue Details *@
+        <RadzenCard Style="flex:2; min-width:400px;">
+            <h5>Details</h5>
+            <RadzenStack Gap="8">
+                <div><strong>Status:</strong> <RadzenBadge Text="@_issue.Status?.Name" /></div>
+                <div><strong>Priority:</strong> <RadzenBadge Text="@_issue.Priority.ToString()" /></div>
+                <div><strong>Category:</strong> @_issue.Category?.Name</div>
+                <div><strong>District:</strong> @_issue.District?.Name</div>
+                <div><strong>Address:</strong> @_issue.AddressText</div>
+                <div><strong>Reported by:</strong> @_issue.CreatedBy?.DisplayName on @_issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
+                <div><strong>Assigned to:</strong> @(_issue.AssignedTo?.DisplayName ?? "Unassigned")</div>
+            </RadzenStack>
+            <hr />
+            <h5>Description</h5>
+            <p>@_issue.Description</p>
+
+            @* Quick Status Change *@
+            <hr />
+            <h5>Quick Actions</h5>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="8" Wrap="FlexWrap.Wrap">
+                <RadzenDropDown @bind-Value="_newStatusId" Data="@_statuses" TextProperty="Name" ValueProperty="StatusId" Style="width:200px;" />
+                <RadzenDropDown @bind-Value="_newAssignedToUserId" Data="@_operators" TextProperty="DisplayName" ValueProperty="UserId"
+                                AllowClear="true" Placeholder="Unassigned" Style="width:200px;" />
+                <RadzenButton Text="Update" Icon="save" Click="@QuickUpdate" />
+            </RadzenStack>
+        </RadzenCard>
+
+        @* Right: Map + Audit *@
+        <RadzenStack Style="flex:1; min-width:300px;" Gap="16">
+            <RadzenCard>
+                <h5>Location</h5>
+                <div id="issue-detail-map" style="height:250px; width:100%;"></div>
+                <div class="rz-mt-2 rz-text-body2">@_issue.Lat.ToString("F4"), @_issue.Lng.ToString("F4")</div>
+            </RadzenCard>
+
+            <RadzenCard>
+                <h5>Audit Log</h5>
+                @if (_issue.AuditLogs.Any())
+                {
+                    <RadzenStack Gap="4">
+                        @foreach (var log in _issue.AuditLogs)
+                        {
+                            <div class="rz-text-body2">
+                                <strong>@log.Actor?.DisplayName</strong> — @log.Action
+                                <br /><span class="rz-color-secondary">@log.CreatedAt.ToString("yyyy-MM-dd HH:mm")</span>
+                                @if (!string.IsNullOrEmpty(log.DetailsJson))
+                                {
+                                    <br /><code>@log.DetailsJson</code>
+                                }
+                            </div>
+                        }
+                    </RadzenStack>
+                }
+                else
+                {
+                    <p class="rz-text-body2">No audit history yet.</p>
+                }
+            </RadzenCard>
+        </RadzenStack>
+    </RadzenStack>
+
+    @* Comments Section *@
+    <RadzenCard class="rz-mt-4">
+        <h5>Comments (@_issue.Comments.Count)</h5>
+        @foreach (var comment in _issue.Comments)
+        {
+            <div class="rz-mb-3 rz-p-3" style="background:var(--rz-base-100);border-radius:var(--rz-border-radius);">
+                <strong>@comment.Author?.DisplayName</strong>
+                <span class="rz-ml-2 rz-color-secondary rz-text-body2">@comment.CreatedAt.ToString("yyyy-MM-dd HH:mm")</span>
+                <p class="rz-mt-1 rz-mb-0">@comment.Body</p>
+            </div>
+        }
+
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" class="rz-mt-3">
+            <RadzenTextBox @bind-Value="_newComment" Placeholder="Add a comment..." Style="flex:1;" />
+            <RadzenButton Text="Post" Icon="send" Click="@PostComment" Disabled="@string.IsNullOrWhiteSpace(_newComment)" />
+        </RadzenStack>
+    </RadzenCard>
+
+    @* Attachments Section *@
+    <RadzenCard class="rz-mt-4">
+        <h5>Attachments (@_issue.Attachments.Count)</h5>
+        @if (_issue.Attachments.Any())
+        {
+            @foreach (var att in _issue.Attachments)
+            {
+                <div class="rz-mb-2">
+                    <RadzenIcon Icon="attach_file" />
+                    <span>@att.FileName</span>
+                    <span class="rz-ml-2 rz-color-secondary rz-text-body2">(@FormatFileSize(att.SizeBytes))</span>
+                    <span class="rz-ml-2 rz-color-secondary rz-text-body2">@att.UploadedAt.ToString("yyyy-MM-dd HH:mm")</span>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="rz-text-body2">No attachments yet.</p>
+        }
+
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" class="rz-mt-3">
+            <InputFile OnChange="@OnFileSelected" class="form-control" style="max-width:400px;" />
+            <RadzenButton Text="Upload" Icon="upload" Click="@UploadAttachment" Disabled="@(_selectedFile == null)" />
+        </RadzenStack>
+    </RadzenCard>
+}
+
+@code {
+    [Parameter] public int IssueId { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private Issue? _issue;
+    private List<Status> _statuses = new();
+    private List<User> _operators = new();
+    private int _newStatusId;
+    private int? _newAssignedToUserId;
+    private string _newComment = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _statuses = await IssueService.GetStatusesAsync();
+        _operators = await IssueService.GetOperatorsAsync();
+        await LoadIssue();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _issue != null)
+        {
+            await JS.InvokeVoidAsync("mapInterop.initDetailMap", "issue-detail-map", _issue.Lat, _issue.Lng, _issue.Title);
+        }
+    }
+
+    private async Task LoadIssue()
+    {
+        _issue = await IssueService.GetIssueByIdAsync(IssueId);
+        if (_issue != null)
+        {
+            _newStatusId = _issue.StatusId;
+            _newAssignedToUserId = _issue.AssignedToUserId;
+        }
+    }
+
+    private async Task QuickUpdate()
+    {
+        if (_issue == null) return;
+        var userId = await GetCurrentUserIdAsync();
+
+        var statusChanged = _issue.StatusId != _newStatusId;
+        var assigneeChanged = _issue.AssignedToUserId != _newAssignedToUserId;
+
+        _issue.StatusId = _newStatusId;
+        _issue.AssignedToUserId = _newAssignedToUserId;
+        await IssueService.UpdateIssueAsync(_issue);
+
+        if (statusChanged)
+            await AuditService.LogAsync(_issue.IssueId, userId, "StatusChanged",
+                System.Text.Json.JsonSerializer.Serialize(new { to = _newStatusId }));
+        if (assigneeChanged)
+            await AuditService.LogAsync(_issue.IssueId, userId, "Assigned",
+                System.Text.Json.JsonSerializer.Serialize(new { assignedToUserId = _newAssignedToUserId }));
+
+        await LoadIssue();
+        Notification.Notify(NotificationSeverity.Success, "Issue updated");
+    }
+
+    private async Task PostComment()
+    {
+        if (_issue == null || string.IsNullOrWhiteSpace(_newComment)) return;
+        var userId = await GetCurrentUserIdAsync();
+
+        await IssueService.AddCommentAsync(new Comment
+        {
+            IssueId = _issue.IssueId,
+            AuthorUserId = userId,
+            Body = _newComment
+        });
+        await AuditService.LogAsync(_issue.IssueId, userId, "CommentAdded");
+        _newComment = "";
+        await LoadIssue();
+    }
+
+    private async Task<int> GetCurrentUserIdAsync()
+    {
+        if (AuthState == null) return 1;
+        var state = await AuthState;
+        var claim = state.User.FindFirst(ClaimTypes.NameIdentifier);
+        return claim != null ? int.Parse(claim.Value) : 1;
+    }
+
+    // Attachment handling
+    private IBrowserFile? _selectedFile;
+    private static readonly long MaxFileSize = 5 * 1024 * 1024; // 5MB
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+    }
+
+    private async Task UploadAttachment()
+    {
+        if (_issue == null || _selectedFile == null) return;
+
+        try
+        {
+            using var stream = _selectedFile.OpenReadStream(MaxFileSize);
+            var storagePath = await FileStorage.SaveFileAsync(_selectedFile.Name, stream, _selectedFile.ContentType);
+
+            await IssueService.AddAttachmentAsync(new Attachment
+            {
+                IssueId = _issue.IssueId,
+                FileName = _selectedFile.Name,
+                ContentType = _selectedFile.ContentType,
+                SizeBytes = _selectedFile.Size,
+                StoragePath = storagePath
+            });
+
+            var userId = await GetCurrentUserIdAsync();
+            await AuditService.LogAsync(_issue.IssueId, userId, "AttachmentAdded",
+                System.Text.Json.JsonSerializer.Serialize(new { fileName = _selectedFile.Name }));
+
+            _selectedFile = null;
+            await LoadIssue();
+            Notification.Notify(NotificationSeverity.Success, "Attachment uploaded");
+        }
+        catch (Exception ex)
+        {
+            Notification.Notify(NotificationSeverity.Error, "Upload failed", ex.Message);
+        }
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+}

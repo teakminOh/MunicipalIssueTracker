@@ -1,0 +1,18 @@
+@page "/access-denied"
+
+<PageTitle>Access Denied - Municipal Issue Tracker</PageTitle>
+
+<h3 class="rz-mb-4">Access Denied</h3>
+
+<RadzenAlert AlertStyle="AlertStyle.Warning" ShowIcon="true" Variant="Variant.Flat">
+    You do not have permission to access this page. Please log in with an account that has the required role.
+</RadzenAlert>
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="8" class="rz-mt-4">
+    <RadzenButton Text="Go to Dashboard" Icon="home" Click="@(() => Nav.NavigateTo("/"))" />
+    <RadzenButton Text="Login" Icon="login" ButtonStyle="ButtonStyle.Light" Click="@(() => Nav.NavigateTo("/login"))" />
+</RadzenStack>
+
+@code {
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+}

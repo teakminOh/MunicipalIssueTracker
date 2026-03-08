@@ -1,0 +1,198 @@
+@page "/issues/create"
+@page "/issues/{IssueId:int}/edit"
+@rendermode InteractiveServer
+@inject IssueService IssueService
+@inject AuditService AuditService
+@inject NavigationManager Nav
+@inject NotificationService Notification
+
+<PageTitle>@(_isEdit ? "Edit Issue" : "Create Issue") - Municipal Issue Tracker</PageTitle>
+
+<h3 class="rz-mb-4">@(_isEdit ? "Edit Issue" : "Create New Issue")</h3>
+
+<RadzenCard Style="max-width:800px;">
+    <RadzenTemplateForm TItem="IssueFormModel" Data="@_model" Submit="@OnSubmit">
+        <RadzenStack Gap="16">
+            <RadzenFormField Text="Title">
+                <RadzenTextBox @bind-Value="_model.Title" MaxLength="200" Style="width:100%;" />
+            </RadzenFormField>
+
+            <RadzenFormField Text="Description">
+                <RadzenTextArea @bind-Value="_model.Description" Rows="4" Style="width:100%;" />
+            </RadzenFormField>
+
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="16" Wrap="FlexWrap.Wrap">
+                <RadzenFormField Text="Category" Style="flex:1;">
+                    <RadzenDropDown @bind-Value="_model.CategoryId" Data="@_categories" TextProperty="Name" ValueProperty="CategoryId" Style="width:100%;" />
+                </RadzenFormField>
+
+                <RadzenFormField Text="District" Style="flex:1;">
+                    <RadzenDropDown @bind-Value="_model.DistrictId" Data="@_districts" TextProperty="Name" ValueProperty="DistrictId" Style="width:100%;" />
+                </RadzenFormField>
+
+                <RadzenFormField Text="Priority" Style="flex:1;">
+                    <RadzenDropDown @bind-Value="_model.Priority" Data="@_priorities" Style="width:100%;" />
+                </RadzenFormField>
+            </RadzenStack>
+
+            @if (_isEdit)
+            {
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="16" Wrap="FlexWrap.Wrap">
+                    <RadzenFormField Text="Status" Style="flex:1;">
+                        <RadzenDropDown @bind-Value="_model.StatusId" Data="@_statuses" TextProperty="Name" ValueProperty="StatusId" Style="width:100%;" />
+                    </RadzenFormField>
+
+                    <RadzenFormField Text="Assigned To" Style="flex:1;">
+                        <RadzenDropDown @bind-Value="_model.AssignedToUserId" Data="@_operators" TextProperty="DisplayName" ValueProperty="UserId"
+                                        AllowClear="true" Placeholder="Unassigned" Style="width:100%;" />
+                    </RadzenFormField>
+                </RadzenStack>
+            }
+
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
+                <RadzenFormField Text="Address" Style="flex:2;">
+                    <RadzenTextBox @bind-Value="_model.AddressText" MaxLength="300" Style="width:100%;" />
+                </RadzenFormField>
+                <RadzenFormField Text="Latitude" Style="flex:1;">
+                    <RadzenNumeric @bind-Value="_model.Lat" Step="0.0001" Style="width:100%;" />
+                </RadzenFormField>
+                <RadzenFormField Text="Longitude" Style="flex:1;">
+                    <RadzenNumeric @bind-Value="_model.Lng" Step="0.0001" Style="width:100%;" />
+                </RadzenFormField>
+            </RadzenStack>
+
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="8" JustifyContent="JustifyContent.End">
+                <RadzenButton ButtonType="ButtonType.Button" Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => Nav.NavigateTo("/issues"))" />
+                <RadzenButton ButtonType="ButtonType.Submit" Text="@(_isEdit ? "Save Changes" : "Create Issue")" Icon="save" />
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenTemplateForm>
+</RadzenCard>
+
+@code {
+    [Parameter] public int? IssueId { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private bool _isEdit => IssueId.HasValue;
+    private IssueFormModel _model = new();
+    private List<Status> _statuses = new();
+    private List<Category> _categories = new();
+    private List<District> _districts = new();
+    private List<User> _operators = new();
+    private List<IssuePriority> _priorities = Enum.GetValues<IssuePriority>().ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _statuses = await IssueService.GetStatusesAsync();
+        _categories = await IssueService.GetCategoriesAsync();
+        _districts = await IssueService.GetDistrictsAsync();
+        _operators = await IssueService.GetOperatorsAsync();
+
+        if (_isEdit)
+        {
+            var issue = await IssueService.GetIssueByIdAsync(IssueId!.Value);
+            if (issue == null) { Nav.NavigateTo("/issues"); return; }
+            _model = new IssueFormModel
+            {
+                Title = issue.Title,
+                Description = issue.Description,
+                CategoryId = issue.CategoryId,
+                StatusId = issue.StatusId,
+                DistrictId = issue.DistrictId,
+                Priority = issue.Priority,
+                Lat = issue.Lat,
+                Lng = issue.Lng,
+                AddressText = issue.AddressText,
+                AssignedToUserId = issue.AssignedToUserId
+            };
+        }
+        else
+        {
+            _model.StatusId = _statuses.FirstOrDefault()?.StatusId ?? 1;
+            _model.CategoryId = _categories.FirstOrDefault()?.CategoryId ?? 1;
+            _model.DistrictId = _districts.FirstOrDefault()?.DistrictId ?? 1;
+            // Default Stockholm area
+            _model.Lat = 59.33;
+            _model.Lng = 18.07;
+        }
+    }
+
+    private async Task OnSubmit()
+    {
+        var userId = await GetCurrentUserIdAsync();
+
+        if (_isEdit)
+        {
+            var issue = await IssueService.GetIssueByIdAsync(IssueId!.Value);
+            if (issue == null) return;
+
+            var oldStatusId = issue.StatusId;
+            var oldAssignedTo = issue.AssignedToUserId;
+
+            issue.Title = _model.Title;
+            issue.Description = _model.Description;
+            issue.CategoryId = _model.CategoryId;
+            issue.StatusId = _model.StatusId;
+            issue.DistrictId = _model.DistrictId;
+            issue.Priority = _model.Priority;
+            issue.Lat = _model.Lat;
+            issue.Lng = _model.Lng;
+            issue.AddressText = _model.AddressText;
+            issue.AssignedToUserId = _model.AssignedToUserId;
+
+            await IssueService.UpdateIssueAsync(issue);
+
+            if (oldStatusId != issue.StatusId)
+                await AuditService.LogAsync(issue.IssueId, userId, "StatusChanged",
+                    System.Text.Json.JsonSerializer.Serialize(new { from = oldStatusId, to = issue.StatusId }));
+            if (oldAssignedTo != issue.AssignedToUserId)
+                await AuditService.LogAsync(issue.IssueId, userId, "Assigned",
+                    System.Text.Json.JsonSerializer.Serialize(new { assignedToUserId = issue.AssignedToUserId }));
+
+            Notification.Notify(NotificationSeverity.Success, "Issue updated");
+        }
+        else
+        {
+            var issue = new Issue
+            {
+                Title = _model.Title,
+                Description = _model.Description,
+                CategoryId = _model.CategoryId,
+                StatusId = _model.StatusId,
+                DistrictId = _model.DistrictId,
+                Priority = _model.Priority,
+                Lat = _model.Lat,
+                Lng = _model.Lng,
+                AddressText = _model.AddressText,
+                CreatedByUserId = userId
+            };
+            await IssueService.CreateIssueAsync(issue);
+            await AuditService.LogAsync(issue.IssueId, userId, "Created");
+            Notification.Notify(NotificationSeverity.Success, "Issue created");
+        }
+
+        Nav.NavigateTo("/issues");
+    }
+
+    private async Task<int> GetCurrentUserIdAsync()
+    {
+        if (AuthState == null) return 1;
+        var state = await AuthState;
+        var claim = state.User.FindFirst(ClaimTypes.NameIdentifier);
+        return claim != null ? int.Parse(claim.Value) : 1;
+    }
+
+    private class IssueFormModel
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public int CategoryId { get; set; }
+        public int StatusId { get; set; }
+        public int DistrictId { get; set; }
+        public IssuePriority Priority { get; set; } = IssuePriority.Medium;
+        public double Lat { get; set; }
+        public double Lng { get; set; }
+        public string AddressText { get; set; } = "";
+        public int? AssignedToUserId { get; set; }
+    }
+}

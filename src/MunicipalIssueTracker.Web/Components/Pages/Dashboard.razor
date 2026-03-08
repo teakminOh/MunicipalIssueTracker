@@ -1,0 +1,76 @@
+@page "/"
+@rendermode InteractiveServer
+@inject ReportingService ReportingService
+
+<PageTitle>Dashboard - Municipal Issue Tracker</PageTitle>
+
+<h3 class="rz-mb-4">Dashboard</h3>
+
+@if (_summary != null)
+{
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="16" class="rz-mb-6" Wrap="FlexWrap.Wrap">
+        <RadzenCard Style="min-width:180px;">
+            <h5 class="rz-color-info">Total Issues</h5>
+            <h2>@_summary.TotalIssues</h2>
+        </RadzenCard>
+        <RadzenCard Style="min-width:180px;">
+            <h5 class="rz-color-warning">Open</h5>
+            <h2>@_summary.OpenIssues</h2>
+        </RadzenCard>
+        <RadzenCard Style="min-width:180px;">
+            <h5 class="rz-color-success">Resolved / Closed</h5>
+            <h2>@_summary.ResolvedIssues</h2>
+        </RadzenCard>
+        <RadzenCard Style="min-width:180px;">
+            <h5 class="rz-color-danger">Critical Open</h5>
+            <h2>@_summary.CriticalOpenIssues</h2>
+        </RadzenCard>
+    </RadzenStack>
+}
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="16" Wrap="FlexWrap.Wrap">
+    <RadzenCard Style="flex:1; min-width:400px;">
+        <h5>Issues by District &amp; Status</h5>
+        @if (_districtStatusCounts.Any())
+        {
+            <RadzenDataGrid TItem="DistrictStatusCount" Data="@_districtStatusCounts" AllowSorting="true" Style="max-height:400px;">
+                <Columns>
+                    <RadzenDataGridColumn TItem="DistrictStatusCount" Property="DistrictName" Title="District" />
+                    <RadzenDataGridColumn TItem="DistrictStatusCount" Property="StatusName" Title="Status" />
+                    <RadzenDataGridColumn TItem="DistrictStatusCount" Property="IssueCount" Title="Count" Width="80px" />
+                </Columns>
+            </RadzenDataGrid>
+        }
+    </RadzenCard>
+
+    <RadzenCard Style="flex:1; min-width:400px;">
+        <h5>Latest Comments</h5>
+        @if (_latestComments.Any())
+        {
+            <RadzenDataGrid TItem="LatestCommentReport" Data="@_latestComments" Style="max-height:400px;">
+                <Columns>
+                    <RadzenDataGridColumn TItem="LatestCommentReport" Property="IssueTitle" Title="Issue" Width="200px">
+                        <Template Context="item">
+                            <a href="/issues/@item.IssueId">@item.IssueTitle</a>
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="LatestCommentReport" Property="LatestComment" Title="Comment" />
+                    <RadzenDataGridColumn TItem="LatestCommentReport" Property="AuthorName" Title="Author" Width="130px" />
+                </Columns>
+            </RadzenDataGrid>
+        }
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    private DashboardSummary? _summary;
+    private List<DistrictStatusCount> _districtStatusCounts = new();
+    private List<LatestCommentReport> _latestComments = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _summary = await ReportingService.GetDashboardSummaryAsync();
+        _districtStatusCounts = await ReportingService.GetIssueCountsByDistrictAndStatusAsync();
+        _latestComments = await ReportingService.GetLatestCommentPerIssueAsync();
+    }
+}
