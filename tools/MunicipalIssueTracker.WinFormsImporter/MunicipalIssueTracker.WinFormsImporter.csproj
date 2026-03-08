@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 
+    WinForms CSV Importer Tool
+    
+    This project targets .NET 8 for cross-platform development convenience.
+    For production deployment on Windows, retarget to .NET Framework 4.7.2:
+    
+    1. Change TargetFramework to net472
+    2. Remove <UseWindowsForms> (use System.Windows.Forms reference instead)
+    3. Add System.Net.Http NuGet package for HttpClient
+    
+    The code is written to be compatible with both .NET Framework 4.7.2 and .NET 8.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+</Project>

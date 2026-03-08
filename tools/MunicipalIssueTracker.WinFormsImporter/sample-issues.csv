@@ -1,0 +1,9 @@
+Title,Description,Category,District,Lat,Lng,Address,Priority
+Pothole on Drottninggatan,Large pothole near crossing. Dangerous for cyclists.,Pothole,Centrum,59.3310,18.0640,"Drottninggatan 55, Stockholm",High
+Broken lamp at Stureplan,Street lamp flickering and going dark intermittently.,Broken Street Light,Östermalm,59.3370,18.0720,"Stureplan, Stockholm",Medium
+Overflowing bin Mariatorget,Public waste bin has been full since last week.,Waste / Littering,Södermalm,59.3175,18.0640,"Mariatorget, Stockholm",Medium
+Fallen branch in Kronobergsparken,Large tree branch blocking path after windstorm.,Greenery / Parks,Kungsholmen,59.3330,18.0410,"Kronobergsparken, Stockholm",High
+Cracked sidewalk Birger Jarlsgatan,Multiple cracks creating trip hazard near bus stop.,Road Damage,Norrmalm,59.3420,18.0700,"Birger Jarlsgatan 30, Stockholm",Medium
+Graffiti on tunnel wall,Spray paint along entire tunnel walkway wall.,Graffiti / Vandalism,Vasastan,59.3450,18.0480,"Odenplan tunnel, Stockholm",Low
+Flooded drain Folkungagatan,Drain completely blocked causing water pooling on road.,Water / Drainage,Södermalm,59.3145,18.0750,"Folkungagatan 90, Stockholm",Critical
+Damaged playground equipment,Swing seat broken off chain at children playground.,Greenery / Parks,Centrum,59.3290,18.0600,"Kungsträdgården, Stockholm",High
