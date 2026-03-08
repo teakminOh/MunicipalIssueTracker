@@ -1,0 +1,60 @@
+﻿@inherits LayoutComponentBase
+
+<RadzenLayout>
+    <RadzenHeader>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0" class="rz-p-2">
+            <RadzenSidebarToggle Click="@(() => _sidebarExpanded = !_sidebarExpanded)" />
+            <RadzenLabel Text="Municipal Issue Tracker" class="rz-color-white rz-ml-4" Style="font-size:1.2rem;font-weight:600;" />
+            <div class="rz-ml-auto rz-mr-4">
+                <AuthorizeView>
+                    <Authorized>
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8">
+                            <RadzenLabel Text="@context.User.Identity?.Name" class="rz-color-white" />
+                            <RadzenBadge Text="@context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value" BadgeStyle="BadgeStyle.Info" />
+                            <RadzenButton Text="Logout" Click="@Logout" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" />
+                        </RadzenStack>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="/login" class="rz-color-white">Login</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </RadzenStack>
+    </RadzenHeader>
+    <RadzenSidebar @bind-Expanded="@_sidebarExpanded">
+        <RadzenPanelMenu>
+            <RadzenPanelMenuItem Text="Dashboard" Path="/" Icon="dashboard" />
+            <RadzenPanelMenuItem Text="Issues" Path="/issues" Icon="list" />
+            <RadzenPanelMenuItem Text="Map" Path="/map" Icon="map" />
+            <RadzenPanelMenuItem Text="Reports" Path="/reports" Icon="bar_chart" />
+        </RadzenPanelMenu>
+    </RadzenSidebar>
+    <RadzenBody>
+        <div class="rz-p-4">
+            @Body
+        </div>
+    </RadzenBody>
+</RadzenLayout>
+
+<RadzenDialog />
+<RadzenNotification />
+<RadzenTooltip />
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+@code {
+    private bool _sidebarExpanded = true;
+
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private async Task Logout()
+    {
+        using var http = new HttpClient { BaseAddress = new Uri(Nav.BaseUri) };
+        await http.PostAsync("/api/auth/logout", null);
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+}
