@@ -1,4 +1,5 @@
 @page "/issues/{IssueId:int}"
+@attribute [Authorize]
 @rendermode InteractiveServer
 @inject IssueService IssueService
 @inject AuditService AuditService
@@ -39,14 +40,16 @@ else
             <p>@_issue.Description</p>
 
             @* Quick Status Change *@
-            <hr />
-            <h5>Quick Actions</h5>
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="8" Wrap="FlexWrap.Wrap">
-                <RadzenDropDown @bind-Value="_newStatusId" Data="@_statuses" TextProperty="Name" ValueProperty="StatusId" Style="width:200px;" />
-                <RadzenDropDown @bind-Value="_newAssignedToUserId" Data="@_operators" TextProperty="DisplayName" ValueProperty="UserId"
-                                AllowClear="true" Placeholder="Unassigned" Style="width:200px;" />
-                <RadzenButton Text="Update" Icon="save" Click="@QuickUpdate" />
-            </RadzenStack>
+            <AuthorizeView Roles="Operator,Admin">
+                <hr />
+                <h5>Quick Actions</h5>
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="8" Wrap="FlexWrap.Wrap">
+                    <RadzenDropDown @bind-Value="_newStatusId" Data="@_statuses" TextProperty="Name" ValueProperty="StatusId" Style="width:200px;" />
+                    <RadzenDropDown @bind-Value="_newAssignedToUserId" Data="@_operators" TextProperty="DisplayName" ValueProperty="UserId"
+                                    AllowClear="true" Placeholder="Unassigned" Style="width:200px;" />
+                    <RadzenButton Text="Update" Icon="save" Click="@QuickUpdate" />
+                </RadzenStack>
+            </AuthorizeView>
         </RadzenCard>
 
         @* Right: Map + Audit *@

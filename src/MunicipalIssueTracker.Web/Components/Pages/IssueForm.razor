@@ -1,5 +1,6 @@
 @page "/issues/create"
 @page "/issues/{IssueId:int}/edit"
+@attribute [Authorize(Roles = "Operator,Admin")]
 @rendermode InteractiveServer
 @inject IssueService IssueService
 @inject AuditService AuditService

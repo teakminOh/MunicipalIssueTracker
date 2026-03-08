@@ -1,4 +1,5 @@
 @page "/issues"
+@attribute [Authorize]
 @rendermode InteractiveServer
 @inject IssueService IssueService
 @inject NavigationManager Nav
@@ -7,7 +8,9 @@
 
 <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" class="rz-mb-4">
     <h3 class="rz-mb-0">Issues</h3>
-    <RadzenButton Text="New Issue" Icon="add" Click="@(() => Nav.NavigateTo("/issues/create"))" class="rz-ml-auto" />
+    <AuthorizeView Roles="Operator,Admin">
+        <RadzenButton Text="New Issue" Icon="add" Click="@(() => Nav.NavigateTo("/issues/create"))" class="rz-ml-auto" />
+    </AuthorizeView>
 </RadzenStack>
 
 <RadzenStack Orientation="Orientation.Horizontal" Gap="8" class="rz-mb-4" Wrap="FlexWrap.Wrap">
