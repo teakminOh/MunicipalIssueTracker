@@ -1,0 +1,61 @@
+@page "/map"
+@rendermode InteractiveServer
+@inject IssueService IssueService
+@inject IJSRuntime JS
+
+<PageTitle>Map - Municipal Issue Tracker</PageTitle>
+
+<h3 class="rz-mb-4">Issue Map</h3>
+
+<RadzenStack Orientation="Orientation.Horizontal" Gap="8" class="rz-mb-3" Wrap="FlexWrap.Wrap">
+    <RadzenDropDown @bind-Value="_filterStatusId" Data="@_statuses" TextProperty="Name" ValueProperty="StatusId"
+                    Placeholder="All Statuses" AllowClear="true" Change="@(async _ => await LoadAndRenderMarkers())" Style="width:180px;" />
+    <RadzenDropDown @bind-Value="_filterCategoryId" Data="@_categories" TextProperty="Name" ValueProperty="CategoryId"
+                    Placeholder="All Categories" AllowClear="true" Change="@(async _ => await LoadAndRenderMarkers())" Style="width:180px;" />
+</RadzenStack>
+
+<div id="issues-map" style="height:600px; width:100%; border-radius:var(--rz-border-radius); border:1px solid var(--rz-base-300);"></div>
+
+@code {
+    private List<Status> _statuses = new();
+    private List<Category> _categories = new();
+    private int? _filterStatusId;
+    private int? _filterCategoryId;
+    private bool _mapInitialized;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _statuses = await IssueService.GetStatusesAsync();
+        _categories = await IssueService.GetCategoriesAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Initialize map centered on Stockholm
+            await JS.InvokeVoidAsync("mapInterop.initMap", "issues-map", 59.33, 18.07, 13);
+            _mapInitialized = true;
+            await LoadAndRenderMarkers();
+        }
+    }
+
+    private async Task LoadAndRenderMarkers()
+    {
+        if (!_mapInitialized) return;
+
+        var issues = await IssueService.GetIssuesAsync(_filterStatusId, _filterCategoryId);
+        var markers = issues.Select(i => new
+        {
+            id = i.IssueId,
+            lat = i.Lat,
+            lng = i.Lng,
+            title = i.Title,
+            category = i.Category?.Name ?? "",
+            status = i.Status?.Name ?? "",
+            priority = i.Priority.ToString()
+        }).ToArray();
+
+        await JS.InvokeVoidAsync("mapInterop.setMarkers", (object)markers);
+    }
+}

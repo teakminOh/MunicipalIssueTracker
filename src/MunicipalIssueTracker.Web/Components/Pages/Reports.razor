@@ -1,0 +1,78 @@
+@page "/reports"
+@rendermode InteractiveServer
+@inject ReportingService ReportingService
+
+<PageTitle>Reports - Municipal Issue Tracker</PageTitle>
+
+<h3 class="rz-mb-4">Reports</h3>
+
+<RadzenStack Gap="24">
+    @* Report 1: Issues by District and Status *@
+    <RadzenCard>
+        <h5>Issues by District and Status</h5>
+        <p class="rz-text-body2 rz-color-secondary">SQL: INNER JOIN Districts, Statuses + GROUP BY</p>
+        @if (_districtStatusCounts.Any())
+        {
+            <RadzenChart Style="height:300px;">
+                @foreach (var district in _districtStatusCounts.Select(x => x.DistrictName).Distinct())
+                {
+                    var districtData = _districtStatusCounts.Where(x => x.DistrictName == district).ToList();
+                    <RadzenColumnSeries Data="@districtData" CategoryProperty="StatusName" ValueProperty="IssueCount" Title="@district" />
+                }
+                <RadzenCategoryAxis />
+                <RadzenValueAxis />
+                <RadzenLegend Position="LegendPosition.Bottom" />
+            </RadzenChart>
+        }
+    </RadzenCard>
+
+    @* Report 2: Issues by Category and Priority *@
+    <RadzenCard>
+        <h5>Issues by Category and Priority</h5>
+        <p class="rz-text-body2 rz-color-secondary">SQL: INNER JOIN Categories + GROUP BY Category, Priority</p>
+        @if (_categoryPriorityCounts.Any())
+        {
+            <RadzenDataGrid TItem="CategoryPriorityCount" Data="@_categoryPriorityCounts" AllowSorting="true">
+                <Columns>
+                    <RadzenDataGridColumn TItem="CategoryPriorityCount" Property="CategoryName" Title="Category" />
+                    <RadzenDataGridColumn TItem="CategoryPriorityCount" Property="Priority" Title="Priority" />
+                    <RadzenDataGridColumn TItem="CategoryPriorityCount" Property="IssueCount" Title="Count" Width="100px" />
+                </Columns>
+            </RadzenDataGrid>
+        }
+    </RadzenCard>
+
+    @* Report 3: Latest Comment Per Issue *@
+    <RadzenCard>
+        <h5>Latest Comment per Issue</h5>
+        <p class="rz-text-body2 rz-color-secondary">SQL: Correlated subquery to find latest comment per issue</p>
+        @if (_latestComments.Any())
+        {
+            <RadzenDataGrid TItem="LatestCommentReport" Data="@_latestComments" AllowSorting="true">
+                <Columns>
+                    <RadzenDataGridColumn TItem="LatestCommentReport" Title="Issue" Width="200px">
+                        <Template Context="item">
+                            <a href="/issues/@item.IssueId">@item.IssueTitle</a>
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="LatestCommentReport" Property="LatestComment" Title="Last Comment" />
+                    <RadzenDataGridColumn TItem="LatestCommentReport" Property="AuthorName" Title="By" Width="150px" />
+                    <RadzenDataGridColumn TItem="LatestCommentReport" Property="CommentedAt" Title="Date" Width="150px" FormatString="{0:yyyy-MM-dd HH:mm}" />
+                </Columns>
+            </RadzenDataGrid>
+        }
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    private List<DistrictStatusCount> _districtStatusCounts = new();
+    private List<CategoryPriorityCount> _categoryPriorityCounts = new();
+    private List<LatestCommentReport> _latestComments = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _districtStatusCounts = await ReportingService.GetIssueCountsByDistrictAndStatusAsync();
+        _categoryPriorityCounts = await ReportingService.GetIssueCountsByCategoryAndPriorityAsync();
+        _latestComments = await ReportingService.GetLatestCommentPerIssueAsync();
+    }
+}
