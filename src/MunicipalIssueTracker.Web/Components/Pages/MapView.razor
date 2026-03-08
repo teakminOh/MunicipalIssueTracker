@@ -3,6 +3,7 @@
 @rendermode InteractiveServer
 @inject IssueService IssueService
 @inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <PageTitle>Map - Municipal Issue Tracker</PageTitle>
 
@@ -23,6 +24,7 @@
     private int? _filterStatusId;
     private int? _filterCategoryId;
     private bool _mapInitialized;
+    private bool _disposed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -32,7 +34,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_disposed)
         {
             try
             {
@@ -41,23 +43,24 @@
                 await LoadAndRenderMarkers();
             }
             catch (JSDisconnectedException) { }
+            catch (ObjectDisposedException) { }
         }
     }
 
     private async Task LoadAndRenderMarkers()
     {
-        if (!_mapInitialized) return;
+        if (!_mapInitialized || _disposed) return;
 
         var issues = await IssueService.GetIssuesAsync(_filterStatusId, _filterCategoryId);
-        var markers = issues.Select(i => new
+        var markers = issues.Select(i => new Dictionary<string, object?>
         {
-            id = i.IssueId,
-            lat = i.Lat,
-            lng = i.Lng,
-            title = i.Title,
-            category = i.Category?.Name ?? "",
-            status = i.Status?.Name ?? "",
-            priority = i.Priority.ToString()
+            ["id"] = i.IssueId,
+            ["lat"] = i.Lat,
+            ["lng"] = i.Lng,
+            ["title"] = i.Title,
+            ["category"] = i.Category?.Name ?? "",
+            ["status"] = i.Status?.Name ?? "",
+            ["priority"] = i.Priority.ToString()
         }).ToArray();
 
         try
@@ -65,5 +68,14 @@
             await JS.InvokeVoidAsync("mapInterop.setMarkers", (object)markers);
         }
         catch (JSDisconnectedException) { }
+        catch (ObjectDisposedException) { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        try { await JS.InvokeVoidAsync("mapInterop.disposeMap"); }
+        catch (JSDisconnectedException) { }
+        catch (ObjectDisposedException) { }
     }
 }

@@ -7,6 +7,7 @@
 @inject NotificationService Notification
 @inject IJSRuntime JS
 @inject IFileStorage FileStorage
+@implements IAsyncDisposable
 
 <PageTitle>Issue #@IssueId - Municipal Issue Tracker</PageTitle>
 
@@ -149,15 +150,18 @@ else
         await LoadIssue();
     }
 
+    private bool _disposed;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && _issue != null)
+        if (firstRender && _issue != null && !_disposed)
         {
             try
             {
                 await JS.InvokeVoidAsync("mapInterop.initDetailMap", "issue-detail-map", _issue.Lat, _issue.Lng, _issue.Title);
             }
             catch (JSDisconnectedException) { }
+            catch (ObjectDisposedException) { }
         }
     }
 
@@ -264,5 +268,13 @@ else
         if (bytes < 1024) return $"{bytes} B";
         if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
         return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        try { await JS.InvokeVoidAsync("mapInterop.disposeDetailMap"); }
+        catch (JSDisconnectedException) { }
+        catch (ObjectDisposedException) { }
     }
 }
