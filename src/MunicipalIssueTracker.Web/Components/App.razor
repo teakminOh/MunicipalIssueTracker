@@ -24,6 +24,21 @@
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
     <script src="js/mapInterop.js"></script>
+    <script>
+        window.loginInterop = {
+            login: async function (email, password) {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                return response.ok;
+            },
+            logout: async function () {
+                await fetch('/api/auth/logout', { method: 'POST' });
+            }
+        };
+    </script>
 </body>
 
 </html>

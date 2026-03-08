@@ -4,6 +4,7 @@
 @rendermode InteractiveServer
 @inject NavigationManager Nav
 @inject NotificationService Notification
+@inject IJSRuntime JS
 
 <PageTitle>Login - Municipal Issue Tracker</PageTitle>
 
@@ -52,12 +53,11 @@
 
         try
         {
-            using var http = new HttpClient { BaseAddress = new Uri(Nav.BaseUri) };
-            var response = await http.PostAsJsonAsync("/api/auth/login", new { _model.Email, _model.Password });
+            // Use JS fetch so the browser receives the Set-Cookie header directly
+            var success = await JS.InvokeAsync<bool>("loginInterop.login", _model.Email, _model.Password);
 
-            if (response.IsSuccessStatusCode)
+            if (success)
             {
-                // Force reload to pick up the cookie
                 Nav.NavigateTo("/", forceLoad: true);
             }
             else

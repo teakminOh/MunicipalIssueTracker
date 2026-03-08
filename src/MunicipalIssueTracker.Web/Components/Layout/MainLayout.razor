@@ -50,11 +50,11 @@
     private bool _sidebarExpanded = true;
 
     [Inject] private NavigationManager Nav { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
 
     private async Task Logout()
     {
-        using var http = new HttpClient { BaseAddress = new Uri(Nav.BaseUri) };
-        await http.PostAsync("/api/auth/logout", null);
+        await JS.InvokeVoidAsync("loginInterop.logout");
         Nav.NavigateTo("/login", forceLoad: true);
     }
 }
