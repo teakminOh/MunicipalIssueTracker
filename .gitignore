@@ -1,0 +1,43 @@
+## Build
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+bld/
+
+## .NET
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## NuGet
+*.nupkg
+**/packages/*
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+
+## IDE
+.vs/
+.vscode/
+*.swp
+*.swo
+*~
+.idea/
+
+## OS
+.DS_Store
+Thumbs.db
+
+## App-specific
+*.db
+*.db-shm
+*.db-wal
+uploads/
