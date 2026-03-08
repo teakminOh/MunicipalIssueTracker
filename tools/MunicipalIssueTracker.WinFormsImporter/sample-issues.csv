@@ -1,9 +1,9 @@
 Title,Description,Category,District,Lat,Lng,Address,Priority
-Pothole on Drottninggatan,Large pothole near crossing. Dangerous for cyclists.,Pothole,Centrum,59.3310,18.0640,"Drottninggatan 55, Stockholm",High
-Broken lamp at Stureplan,Street lamp flickering and going dark intermittently.,Broken Street Light,Östermalm,59.3370,18.0720,"Stureplan, Stockholm",Medium
-Overflowing bin Mariatorget,Public waste bin has been full since last week.,Waste / Littering,Södermalm,59.3175,18.0640,"Mariatorget, Stockholm",Medium
-Fallen branch in Kronobergsparken,Large tree branch blocking path after windstorm.,Greenery / Parks,Kungsholmen,59.3330,18.0410,"Kronobergsparken, Stockholm",High
-Cracked sidewalk Birger Jarlsgatan,Multiple cracks creating trip hazard near bus stop.,Road Damage,Norrmalm,59.3420,18.0700,"Birger Jarlsgatan 30, Stockholm",Medium
-Graffiti on tunnel wall,Spray paint along entire tunnel walkway wall.,Graffiti / Vandalism,Vasastan,59.3450,18.0480,"Odenplan tunnel, Stockholm",Low
-Flooded drain Folkungagatan,Drain completely blocked causing water pooling on road.,Water / Drainage,Södermalm,59.3145,18.0750,"Folkungagatan 90, Stockholm",Critical
-Damaged playground equipment,Swing seat broken off chain at children playground.,Greenery / Parks,Centrum,59.3290,18.0600,"Kungsträdgården, Stockholm",High
+Výtlk na Hviezdoslavovej,Veľký výtlk pri priechode. Nebezpečné pre cyklistov.,Pothole,Centrum,49.4075,19.4850,"Hviezdoslavova 55, Námestovo",High
+Pokazené svetlo na Brehoch,Pouličné svetlo bliká a zhasína nepravidelne.,Broken Street Light,Sídlisko Brehy,49.4055,19.4790,"Sídlisko Brehy, Námestovo",Medium
+Preplnený kôš pri kostole,Verejný odpadkový kôš je plný od minulého týždňa.,Waste / Littering,Centrum,49.4080,19.4840,"Námestie A. Bernoláka, Námestovo",Medium
+Spadnutá vetva v mestskom parku,Veľká vetva stromu blokuje chodník po búrke.,Greenery / Parks,Stará Hora,49.4090,19.4900,"Mestský park, Námestovo",High
+Popraskaný chodník na Hattalovej,Viaceré praskliny pri autobusovej zastávke.,Road Damage,Sídlisko Kamence,49.4048,19.4910,"Hattalova 30, Námestovo",Medium
+Grafiti na podchode,Sprejerská maľba v celom podchode.,Graffiti / Vandalism,Sídlisko Brehy,49.4050,19.4780,"Podchod Brehy, Námestovo",Low
+Zaplavený odtok na Rázusovej,Odtok úplne upchatý - voda stojí na ceste.,Water / Drainage,Centrum,49.4068,19.4820,"Rázusova 9, Námestovo",Critical
+Poškodené detské ihrisko,Zlomená húpačka v parku na Kamencoch.,Greenery / Parks,Sídlisko Kamence,49.4045,19.4895,"Ihrisko Kamence, Námestovo",High

@@ -34,10 +34,13 @@
     {
         if (firstRender)
         {
-            // Initialize map centered on Stockholm
-            await JS.InvokeVoidAsync("mapInterop.initMap", "issues-map", 59.33, 18.07, 13);
-            _mapInitialized = true;
-            await LoadAndRenderMarkers();
+            try
+            {
+                await JS.InvokeVoidAsync("mapInterop.initMap", "issues-map", 49.41, 19.48, 14);
+                _mapInitialized = true;
+                await LoadAndRenderMarkers();
+            }
+            catch (JSDisconnectedException) { }
         }
     }
 
@@ -57,6 +60,10 @@
             priority = i.Priority.ToString()
         }).ToArray();
 
-        await JS.InvokeVoidAsync("mapInterop.setMarkers", (object)markers);
+        try
+        {
+            await JS.InvokeVoidAsync("mapInterop.setMarkers", (object)markers);
+        }
+        catch (JSDisconnectedException) { }
     }
 }

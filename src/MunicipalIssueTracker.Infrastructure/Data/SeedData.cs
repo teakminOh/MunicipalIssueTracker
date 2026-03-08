@@ -24,15 +24,15 @@ public static class SeedData
         };
         context.Statuses.AddRange(statuses);
 
-        // Districts (realistic Swedish-style municipality districts)
+        // Districts (Námestovo and surrounding areas in Orava region)
         var districts = new[]
         {
             new District { DistrictId = 1, Name = "Centrum" },
-            new District { DistrictId = 2, Name = "Norrmalm" },
-            new District { DistrictId = 3, Name = "Södermalm" },
-            new District { DistrictId = 4, Name = "Östermalm" },
-            new District { DistrictId = 5, Name = "Kungsholmen" },
-            new District { DistrictId = 6, Name = "Vasastan" },
+            new District { DistrictId = 2, Name = "Sídlisko Brehy" },
+            new District { DistrictId = 3, Name = "Sídlisko Kamence" },
+            new District { DistrictId = 4, Name = "Stará Hora" },
+            new District { DistrictId = 5, Name = "Okoličné" },
+            new District { DistrictId = 6, Name = "Slanická Osada" },
         };
         context.Districts.AddRange(districts);
 
@@ -53,27 +53,27 @@ public static class SeedData
         // Users (passwords hashed with simple PBKDF2 — demo purposes)
         var users = new[]
         {
-            new User { UserId = 1, DisplayName = "Admin User", Email = "admin@municipality.se", Role = UserRole.Admin, PasswordHash = HashPassword("Admin123!"), IsActive = true },
-            new User { UserId = 2, DisplayName = "Erik Johansson", Email = "erik@municipality.se", Role = UserRole.Operator, PasswordHash = HashPassword("Operator123!"), IsActive = true },
-            new User { UserId = 3, DisplayName = "Maria Lindström", Email = "maria@municipality.se", Role = UserRole.Operator, PasswordHash = HashPassword("Operator123!"), IsActive = true },
-            new User { UserId = 4, DisplayName = "Anna Svensson", Email = "anna@municipality.se", Role = UserRole.Viewer, PasswordHash = HashPassword("Viewer123!"), IsActive = true },
+            new User { UserId = 1, DisplayName = "Admin Používateľ", Email = "admin@namestovo.sk", Role = UserRole.Admin, PasswordHash = HashPassword("Admin123!"), IsActive = true },
+            new User { UserId = 2, DisplayName = "Ján Kováč", Email = "jan.kovac@namestovo.sk", Role = UserRole.Operator, PasswordHash = HashPassword("Operator123!"), IsActive = true },
+            new User { UserId = 3, DisplayName = "Mária Horváthová", Email = "maria.horvathova@namestovo.sk", Role = UserRole.Operator, PasswordHash = HashPassword("Operator123!"), IsActive = true },
+            new User { UserId = 4, DisplayName = "Anna Kučerová", Email = "anna.kucerova@namestovo.sk", Role = UserRole.Viewer, PasswordHash = HashPassword("Viewer123!"), IsActive = true },
         };
         context.Users.AddRange(users);
         context.SaveChanges();
 
-        // Issues — Stockholm-area coordinates for realism
+        // Issues — Námestovo-area coordinates for realism
         var issues = new[]
         {
-            new Issue { Title = "Large pothole on Kungsgatan", Description = "Deep pothole near intersection with Sveavägen, approximately 30cm diameter. Risk for cyclists.", CategoryId = 1, StatusId = 1, DistrictId = 1, Lat = 59.3349, Lng = 18.0686, AddressText = "Kungsgatan 44, Stockholm", CreatedByUserId = 4, Priority = IssuePriority.High, CreatedAt = DateTime.UtcNow.AddDays(-5) },
-            new Issue { Title = "Street light out on Götgatan", Description = "Street light #SL-2847 has been non-functional for 3 days. Intersection poorly lit at night.", CategoryId = 2, StatusId = 2, DistrictId = 3, Lat = 59.3155, Lng = 18.0730, AddressText = "Götgatan 18, Stockholm", CreatedByUserId = 4, AssignedToUserId = 2, Priority = IssuePriority.Medium, CreatedAt = DateTime.UtcNow.AddDays(-3) },
-            new Issue { Title = "Overflowing waste bin at Humlegården", Description = "The public waste bin at the south entrance of Humlegården has been overflowing since Monday.", CategoryId = 3, StatusId = 3, DistrictId = 4, Lat = 59.3400, Lng = 18.0750, AddressText = "Humlegården, Stockholm", CreatedByUserId = 4, AssignedToUserId = 3, Priority = IssuePriority.Medium, CreatedAt = DateTime.UtcNow.AddDays(-4) },
-            new Issue { Title = "Fallen tree in Rålambshovsparken", Description = "Large oak tree fallen across the main path after storm. Blocking pedestrian and cyclist access.", CategoryId = 4, StatusId = 3, DistrictId = 5, Lat = 59.3270, Lng = 18.0450, AddressText = "Rålambshovsparken, Stockholm", CreatedByUserId = 1, AssignedToUserId = 2, Priority = IssuePriority.High, CreatedAt = DateTime.UtcNow.AddDays(-2) },
-            new Issue { Title = "Cracked pavement on Odengatan", Description = "Multiple cracks in pavement near bus stop. Trip hazard for elderly pedestrians.", CategoryId = 5, StatusId = 1, DistrictId = 6, Lat = 59.3460, Lng = 18.0530, AddressText = "Odengatan 72, Stockholm", CreatedByUserId = 4, Priority = IssuePriority.Medium, CreatedAt = DateTime.UtcNow.AddDays(-1) },
-            new Issue { Title = "Graffiti on Norrmalm school wall", Description = "Large graffiti spray-painted on south-facing wall of the school building. Contains inappropriate imagery.", CategoryId = 6, StatusId = 2, DistrictId = 2, Lat = 59.3380, Lng = 18.0600, AddressText = "Norrmalm, Stockholm", CreatedByUserId = 4, AssignedToUserId = 3, Priority = IssuePriority.Low, CreatedAt = DateTime.UtcNow.AddDays(-6) },
-            new Issue { Title = "Blocked drain on Hornsgatan", Description = "Storm drain is completely blocked. Water pooling on the road during rain, causing traffic hazard.", CategoryId = 7, StatusId = 1, DistrictId = 3, Lat = 59.3180, Lng = 18.0500, AddressText = "Hornsgatan 82, Stockholm", CreatedByUserId = 1, Priority = IssuePriority.Critical, CreatedAt = DateTime.UtcNow.AddHours(-6) },
-            new Issue { Title = "Damaged bench in Vasaparken", Description = "Wooden slats broken on the bench near the playground. Sharp edges dangerous for children.", CategoryId = 4, StatusId = 4, DistrictId = 6, Lat = 59.3430, Lng = 18.0440, AddressText = "Vasaparken, Stockholm", CreatedByUserId = 4, AssignedToUserId = 2, Priority = IssuePriority.Medium, CreatedAt = DateTime.UtcNow.AddDays(-10) },
-            new Issue { Title = "Illegal dumping near Skanstull", Description = "Furniture and construction waste dumped on the sidewalk. Partially blocking pedestrian path.", CategoryId = 3, StatusId = 2, DistrictId = 3, Lat = 59.3080, Lng = 18.0710, AddressText = "Skanstull, Stockholm", CreatedByUserId = 4, AssignedToUserId = 3, Priority = IssuePriority.High, CreatedAt = DateTime.UtcNow.AddDays(-2) },
-            new Issue { Title = "Road surface deterioration on Fleminggatan", Description = "Extensive road surface wear between Scheelegatan and Pipersgatan. Multiple small potholes forming.", CategoryId = 5, StatusId = 5, DistrictId = 5, Lat = 59.3320, Lng = 18.0370, AddressText = "Fleminggatan 30, Stockholm", CreatedByUserId = 1, AssignedToUserId = 2, Priority = IssuePriority.Medium, CreatedAt = DateTime.UtcNow.AddDays(-15) },
+            new Issue { Title = "Veľký výtlk na Hviezdoslavovej ulici", Description = "Hlboký výtlk blízko križovatky s Cyrila a Metoda, priemer cca 30cm. Riziko pre cyklistov.", CategoryId = 1, StatusId = 1, DistrictId = 1, Lat = 49.4075, Lng = 19.4855, AddressText = "Hviezdoslavova 12, Námestovo", CreatedByUserId = 4, Priority = IssuePriority.High, CreatedAt = DateTime.UtcNow.AddDays(-5) },
+            new Issue { Title = "Nefunkčné pouličné osvetlenie na Hattalovej", Description = "Pouličné svetlo #NO-284 nefunguje 3 dni. Križovatka je v noci slabo osvetlená.", CategoryId = 2, StatusId = 2, DistrictId = 3, Lat = 49.4048, Lng = 19.4910, AddressText = "Hattalova 18, Námestovo", CreatedByUserId = 4, AssignedToUserId = 2, Priority = IssuePriority.Medium, CreatedAt = DateTime.UtcNow.AddDays(-3) },
+            new Issue { Title = "Preplnený odpadkový kôš pri námestí", Description = "Verejný odpadkový kôš na južnom konci námestia je preplnený od pondelka.", CategoryId = 3, StatusId = 3, DistrictId = 1, Lat = 49.4082, Lng = 19.4838, AddressText = "Námestie A. Bernoláka, Námestovo", CreatedByUserId = 4, AssignedToUserId = 3, Priority = IssuePriority.Medium, CreatedAt = DateTime.UtcNow.AddDays(-4) },
+            new Issue { Title = "Padnutý strom v parku pri priehrade", Description = "Veľký strom spadol cez hlavný chodník po búrke. Blokuje prístup pre chodcov a cyklistov.", CategoryId = 4, StatusId = 3, DistrictId = 6, Lat = 49.4120, Lng = 19.4670, AddressText = "Slanická Osada, Námestovo", CreatedByUserId = 1, AssignedToUserId = 2, Priority = IssuePriority.High, CreatedAt = DateTime.UtcNow.AddDays(-2) },
+            new Issue { Title = "Popraskané chodníky na Brehovej", Description = "Viaceré praskliny v chodníku pri autobusovej zastávke. Nebezpečenstvo zakopnutia pre starších ľudí.", CategoryId = 5, StatusId = 1, DistrictId = 2, Lat = 49.4055, Lng = 19.4790, AddressText = "Brehová 45, Námestovo", CreatedByUserId = 4, Priority = IssuePriority.Medium, CreatedAt = DateTime.UtcNow.AddDays(-1) },
+            new Issue { Title = "Grafiti na stene školy na Kamencoch", Description = "Veľké grafiti nastriekané na južnej stene školskej budovy. Obsahuje nevhodné obrázky.", CategoryId = 6, StatusId = 2, DistrictId = 3, Lat = 49.4040, Lng = 19.4880, AddressText = "Sídlisko Kamence, Námestovo", CreatedByUserId = 4, AssignedToUserId = 3, Priority = IssuePriority.Low, CreatedAt = DateTime.UtcNow.AddDays(-6) },
+            new Issue { Title = "Upchatý odtok na Rázusovej ulici", Description = "Kanalizačný odtok je úplne upchatý. Voda sa hromadí na ceste počas dažďa, spôsobuje dopravné problémy.", CategoryId = 7, StatusId = 1, DistrictId = 1, Lat = 49.4068, Lng = 19.4820, AddressText = "Rázusova 8, Námestovo", CreatedByUserId = 1, Priority = IssuePriority.Critical, CreatedAt = DateTime.UtcNow.AddHours(-6) },
+            new Issue { Title = "Poškodená lavička v mestskom parku", Description = "Zlomené drevené laty na lavičke pri ihrisku. Ostré hrany nebezpečné pre deti.", CategoryId = 4, StatusId = 4, DistrictId = 4, Lat = 49.4090, Lng = 19.4900, AddressText = "Mestský park, Námestovo", CreatedByUserId = 4, AssignedToUserId = 2, Priority = IssuePriority.Medium, CreatedAt = DateTime.UtcNow.AddDays(-10) },
+            new Issue { Title = "Nelegálne skládkovanie pri Brehoch", Description = "Nábytok a stavebný odpad vysypaný na chodníku. Čiastočne blokuje cestu pre chodcov.", CategoryId = 3, StatusId = 2, DistrictId = 2, Lat = 49.4045, Lng = 19.4770, AddressText = "Sídlisko Brehy, Námestovo", CreatedByUserId = 4, AssignedToUserId = 3, Priority = IssuePriority.High, CreatedAt = DateTime.UtcNow.AddDays(-2) },
+            new Issue { Title = "Poškodená cesta na Okružnej", Description = "Rozsiahle opotrebenie povrchu cesty medzi Okružnou a Hattalovou. Tvoria sa viaceré malé výtlky.", CategoryId = 5, StatusId = 5, DistrictId = 5, Lat = 49.4030, Lng = 19.4850, AddressText = "Okružná 30, Námestovo", CreatedByUserId = 1, AssignedToUserId = 2, Priority = IssuePriority.Medium, CreatedAt = DateTime.UtcNow.AddDays(-15) },
         };
         context.Issues.AddRange(issues);
         context.SaveChanges();
@@ -81,24 +81,24 @@ public static class SeedData
         // Comments
         var comments = new[]
         {
-            new Comment { IssueId = 1, AuthorUserId = 1, Body = "Confirmed by field inspection. This needs urgent attention.", CreatedAt = DateTime.UtcNow.AddDays(-4) },
-            new Comment { IssueId = 2, AuthorUserId = 2, Body = "Light fixture model identified: SL-2847. Replacement part ordered.", CreatedAt = DateTime.UtcNow.AddDays(-2) },
-            new Comment { IssueId = 3, AuthorUserId = 3, Body = "Extra waste collection scheduled for this location.", CreatedAt = DateTime.UtcNow.AddDays(-3) },
-            new Comment { IssueId = 4, AuthorUserId = 2, Body = "Tree removal crew dispatched. Expected completion within 24 hours.", CreatedAt = DateTime.UtcNow.AddDays(-1) },
-            new Comment { IssueId = 8, AuthorUserId = 2, Body = "Bench repaired and sanded. Safe for use.", CreatedAt = DateTime.UtcNow.AddDays(-7) },
-            new Comment { IssueId = 10, AuthorUserId = 1, Body = "Road resurfacing completed in full. Issue resolved and closed.", CreatedAt = DateTime.UtcNow.AddDays(-8) },
+            new Comment { IssueId = 1, AuthorUserId = 1, Body = "Potvrdené terénnou obhliadkou. Vyžaduje si naliehavú opravu.", CreatedAt = DateTime.UtcNow.AddDays(-4) },
+            new Comment { IssueId = 2, AuthorUserId = 2, Body = "Model svietidla identifikovaný: NO-284. Náhradný diel objednaný.", CreatedAt = DateTime.UtcNow.AddDays(-2) },
+            new Comment { IssueId = 3, AuthorUserId = 3, Body = "Mimoriadny odvoz odpadu naplánovaný na túto lokalitu.", CreatedAt = DateTime.UtcNow.AddDays(-3) },
+            new Comment { IssueId = 4, AuthorUserId = 2, Body = "Tím na odstraňovanie stromov vyslaný. Predpokladané dokončenie do 24 hodín.", CreatedAt = DateTime.UtcNow.AddDays(-1) },
+            new Comment { IssueId = 8, AuthorUserId = 2, Body = "Lavička opravená a obrúsená. Bezpečná na použitie.", CreatedAt = DateTime.UtcNow.AddDays(-7) },
+            new Comment { IssueId = 10, AuthorUserId = 1, Body = "Prefrézovanie cesty dokončené v plnom rozsahu. Problém vyriešený a uzavretý.", CreatedAt = DateTime.UtcNow.AddDays(-8) },
         };
         context.Comments.AddRange(comments);
 
         // Audit logs
         var audits = new[]
         {
-            new AuditLog { IssueId = 2, ActorUserId = 1, Action = "StatusChanged", DetailsJson = "{\"from\":\"Reported\",\"to\":\"Confirmed\"}", CreatedAt = DateTime.UtcNow.AddDays(-3) },
-            new AuditLog { IssueId = 2, ActorUserId = 1, Action = "Assigned", DetailsJson = "{\"assignedTo\":\"Erik Johansson\"}", CreatedAt = DateTime.UtcNow.AddDays(-3) },
-            new AuditLog { IssueId = 3, ActorUserId = 1, Action = "StatusChanged", DetailsJson = "{\"from\":\"Reported\",\"to\":\"In Progress\"}", CreatedAt = DateTime.UtcNow.AddDays(-4) },
-            new AuditLog { IssueId = 4, ActorUserId = 1, Action = "StatusChanged", DetailsJson = "{\"from\":\"Reported\",\"to\":\"In Progress\"}", CreatedAt = DateTime.UtcNow.AddDays(-2) },
-            new AuditLog { IssueId = 8, ActorUserId = 2, Action = "StatusChanged", DetailsJson = "{\"from\":\"In Progress\",\"to\":\"Resolved\"}", CreatedAt = DateTime.UtcNow.AddDays(-7) },
-            new AuditLog { IssueId = 10, ActorUserId = 1, Action = "StatusChanged", DetailsJson = "{\"from\":\"Resolved\",\"to\":\"Closed\"}", CreatedAt = DateTime.UtcNow.AddDays(-8) },
+            new AuditLog { IssueId = 2, ActorUserId = 1, Action = "StatusChanged", DetailsJson = "{\"from\":\"Nahlásené\",\"to\":\"Potvrdené\"}", CreatedAt = DateTime.UtcNow.AddDays(-3) },
+            new AuditLog { IssueId = 2, ActorUserId = 1, Action = "Assigned", DetailsJson = "{\"assignedTo\":\"Ján Kováč\"}", CreatedAt = DateTime.UtcNow.AddDays(-3) },
+            new AuditLog { IssueId = 3, ActorUserId = 1, Action = "StatusChanged", DetailsJson = "{\"from\":\"Nahlásené\",\"to\":\"V riešení\"}", CreatedAt = DateTime.UtcNow.AddDays(-4) },
+            new AuditLog { IssueId = 4, ActorUserId = 1, Action = "StatusChanged", DetailsJson = "{\"from\":\"Nahlásené\",\"to\":\"V riešení\"}", CreatedAt = DateTime.UtcNow.AddDays(-2) },
+            new AuditLog { IssueId = 8, ActorUserId = 2, Action = "StatusChanged", DetailsJson = "{\"from\":\"V riešení\",\"to\":\"Vyriešené\"}", CreatedAt = DateTime.UtcNow.AddDays(-7) },
+            new AuditLog { IssueId = 10, ActorUserId = 1, Action = "StatusChanged", DetailsJson = "{\"from\":\"Vyriešené\",\"to\":\"Uzavreté\"}", CreatedAt = DateTime.UtcNow.AddDays(-8) },
         };
         context.AuditLogs.AddRange(audits);
 

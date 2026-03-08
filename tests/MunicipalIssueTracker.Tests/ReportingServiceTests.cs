@@ -32,12 +32,12 @@ public class ReportingServiceTests : IDisposable
     private void SeedTestData()
     {
         var district1 = new District { DistrictId = 1, Name = "Centrum" };
-        var district2 = new District { DistrictId = 2, Name = "Södermalm" };
+        var district2 = new District { DistrictId = 2, Name = "Sídlisko Brehy" };
         var category1 = new Category { CategoryId = 1, Name = "Pothole" };
         var category2 = new Category { CategoryId = 2, Name = "Graffiti" };
         var statusOpen = new Status { StatusId = 1, Name = "Open", SortOrder = 1 };
         var statusResolved = new Status { StatusId = 2, Name = "Resolved", SortOrder = 4 };
-        var user = new User { UserId = 1, Email = "admin@test.se", PasswordHash = "x", DisplayName = "Admin", Role = UserRole.Admin };
+        var user = new User { UserId = 1, Email = "admin@namestovo.sk", PasswordHash = "x", DisplayName = "Admin", Role = UserRole.Admin };
 
         _db.Districts.AddRange(district1, district2);
         _db.Categories.AddRange(category1, category2);
@@ -46,9 +46,9 @@ public class ReportingServiceTests : IDisposable
         _db.SaveChanges();
 
         _db.Issues.AddRange(
-            new Issue { IssueId = 1, Title = "Hole A", Description = "Desc", DistrictId = 1, CategoryId = 1, StatusId = 1, Priority = IssuePriority.High, Lat = 59.33, Lng = 18.07, AddressText = "Addr", CreatedByUserId = 1, CreatedAt = DateTime.UtcNow },
-            new Issue { IssueId = 2, Title = "Hole B", Description = "Desc", DistrictId = 1, CategoryId = 1, StatusId = 2, Priority = IssuePriority.Low, Lat = 59.33, Lng = 18.07, AddressText = "Addr", CreatedByUserId = 1, CreatedAt = DateTime.UtcNow },
-            new Issue { IssueId = 3, Title = "Tag C", Description = "Desc", DistrictId = 2, CategoryId = 2, StatusId = 1, Priority = IssuePriority.Critical, Lat = 59.32, Lng = 18.08, AddressText = "Addr", CreatedByUserId = 1, CreatedAt = DateTime.UtcNow }
+            new Issue { IssueId = 1, Title = "Hole A", Description = "Desc", DistrictId = 1, CategoryId = 1, StatusId = 1, Priority = IssuePriority.High, Lat = 49.41, Lng = 19.48, AddressText = "Addr", CreatedByUserId = 1, CreatedAt = DateTime.UtcNow },
+            new Issue { IssueId = 2, Title = "Hole B", Description = "Desc", DistrictId = 1, CategoryId = 1, StatusId = 2, Priority = IssuePriority.Low, Lat = 49.41, Lng = 19.48, AddressText = "Addr", CreatedByUserId = 1, CreatedAt = DateTime.UtcNow },
+            new Issue { IssueId = 3, Title = "Tag C", Description = "Desc", DistrictId = 2, CategoryId = 2, StatusId = 1, Priority = IssuePriority.Critical, Lat = 49.40, Lng = 19.49, AddressText = "Addr", CreatedByUserId = 1, CreatedAt = DateTime.UtcNow }
         );
         _db.SaveChanges();
 

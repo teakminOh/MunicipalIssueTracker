@@ -97,10 +97,10 @@ The database is automatically created and seeded on first run.
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@municipality.se | Admin123! |
-| Operator | erik@municipality.se | Operator123! |
-| Operator | maria@municipality.se | Operator123! |
-| Viewer | anna@municipality.se | Viewer123! |
+| Admin | admin@namestovo.sk | Admin123! |
+| Operator | jan.kovac@namestovo.sk | Operator123! |
+| Operator | maria.horvathova@namestovo.sk | Operator123! |
+| Viewer | anna.kucerova@namestovo.sk | Viewer123! |
 
 ### Run Tests
 
@@ -135,7 +135,7 @@ MunicipalIssueTracker/
 The domain model includes:
 - **Issues** — Core entity with title, description, coordinates, priority, status
 - **Users** — With roles (Admin, Operator, Viewer)
-- **Districts** — Municipal districts (Stockholm-based demo data)
+- **Districts** — Municipal districts (Námestovo, Slovakia demo data)
 - **Categories** — Issue types (Pothole, Street Light, Waste, etc.)
 - **Statuses** — Workflow states with sort order
 - **Comments** — Issue discussion thread

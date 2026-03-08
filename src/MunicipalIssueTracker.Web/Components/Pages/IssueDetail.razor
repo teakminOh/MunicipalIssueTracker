@@ -153,7 +153,11 @@ else
     {
         if (firstRender && _issue != null)
         {
-            await JS.InvokeVoidAsync("mapInterop.initDetailMap", "issue-detail-map", _issue.Lat, _issue.Lng, _issue.Title);
+            try
+            {
+                await JS.InvokeVoidAsync("mapInterop.initDetailMap", "issue-detail-map", _issue.Lat, _issue.Lng, _issue.Title);
+            }
+            catch (JSDisconnectedException) { }
         }
     }
 

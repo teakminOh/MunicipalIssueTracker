@@ -29,12 +29,12 @@ public class IssueServiceTests : IDisposable
         );
         _db.Categories.Add(new Category { CategoryId = 1, Name = "Pothole", DefaultPriority = IssuePriority.High });
         _db.Districts.Add(new District { DistrictId = 1, Name = "Centrum" });
-        _db.Users.Add(new User { UserId = 1, DisplayName = "Test", Email = "test@test.se", PasswordHash = "x:x", Role = UserRole.Admin });
+        _db.Users.Add(new User { UserId = 1, DisplayName = "Test", Email = "test@namestovo.sk", PasswordHash = "x:x", Role = UserRole.Admin });
         _db.SaveChanges();
 
         _db.Issues.AddRange(
-            new Issue { Title = "Issue A", CategoryId = 1, StatusId = 1, DistrictId = 1, CreatedByUserId = 1, Lat = 59.33, Lng = 18.07, Priority = IssuePriority.High },
-            new Issue { Title = "Issue B", CategoryId = 1, StatusId = 2, DistrictId = 1, CreatedByUserId = 1, Lat = 59.34, Lng = 18.08, Priority = IssuePriority.Low }
+            new Issue { Title = "Issue A", CategoryId = 1, StatusId = 1, DistrictId = 1, CreatedByUserId = 1, Lat = 49.41, Lng = 19.48, Priority = IssuePriority.High },
+            new Issue { Title = "Issue B", CategoryId = 1, StatusId = 2, DistrictId = 1, CreatedByUserId = 1, Lat = 49.42, Lng = 19.49, Priority = IssuePriority.Low }
         );
         _db.SaveChanges();
     }
@@ -80,8 +80,8 @@ public class IssueServiceTests : IDisposable
             StatusId = 1,
             DistrictId = 1,
             CreatedByUserId = 1,
-            Lat = 59.35,
-            Lng = 18.05,
+            Lat = 49.40,
+            Lng = 19.47,
             Priority = IssuePriority.Medium
         };
 
@@ -111,7 +111,7 @@ public class IssueServiceTests : IDisposable
     [Fact]
     public async Task GetIssuesInBoundsAsync_FiltersCorrectly()
     {
-        var issues = await _svc.GetIssuesInBoundsAsync(59.32, 18.06, 59.335, 18.075);
+        var issues = await _svc.GetIssuesInBoundsAsync(49.405, 19.475, 49.415, 19.485);
         Assert.Single(issues); // Only Issue A is within these bounds
     }
 
