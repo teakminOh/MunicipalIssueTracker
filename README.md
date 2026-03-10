@@ -5,6 +5,8 @@ A web application for registering and managing municipal infrastructure issues â
 Built as a realistic portfolio project demonstrating **.NET 8**, **Blazor**, **Radzen**, **EF Core**, **SQL reporting**, and **Leaflet map integration** â€” aligned with municipal digitalization roles.
 
 ---
+<img width="1897" height="696" alt="image" src="https://github.com/user-attachments/assets/fc6a5c56-c008-4408-9d58-3e8637811cb2" />
+
 
 ## Tech Stack
 
