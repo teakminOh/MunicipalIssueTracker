@@ -253,7 +253,7 @@
             // Auto-classify category, priority, and district
             var categoryId = Classifier.ClassifyCategory(_model.Title, _model.Description);
             var priority = await Classifier.ClassifyPriorityAsync(_model.Title, _model.Description, categoryId);
-            var districtId = Classifier.ClassifyDistrict(_model.Lat, _model.Lng);
+            var districtId = Classifier.ClassifyDistrict(_model.Lat, _model.Lng, _model.AddressText);
 
             var issue = new Issue
             {

@@ -34,7 +34,7 @@
         <h5>Issues by District &amp; Status</h5>
         @if (_districtStatusCounts.Any())
         {
-            <RadzenDataGrid TItem="DistrictStatusCount" Data="@_districtStatusCounts" AllowSorting="true" Style="max-height:400px;">
+            <RadzenDataGrid TItem="DistrictStatusCount" Data="@_districtStatusCounts.Where(x => x.IssueCount > 0)" AllowSorting="true" Style="max-height:400px;">
                 <Columns>
                     <RadzenDataGridColumn TItem="DistrictStatusCount" Property="DistrictName" Title="District" />
                     <RadzenDataGridColumn TItem="DistrictStatusCount" Property="StatusName" Title="Status" />

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using MunicipalIssueTracker.Domain.Entities;
 using MunicipalIssueTracker.Domain.Enums;
 using Microsoft.Extensions.Logging;
@@ -107,14 +108,52 @@ public class IssueClassificationService
     }
 
     /// <summary>
-    /// Finds the nearest district based on coordinates.
+    /// Determines the district by first checking for a district name in the address text,
+    /// then falling back to nearest coordinates.
     /// </summary>
-    public int ClassifyDistrict(double lat, double lng)
+    public int ClassifyDistrict(double lat, double lng, string? addressText = null)
     {
+        if (!string.IsNullOrWhiteSpace(addressText))
+        {
+            // 1) Exact full-name match (longest first so "Slanická Osada" beats "Slanica I")
+            //    Uses word boundaries so "Stred" won't match "Stredné".
+            foreach (var dc in DistrictCenters.OrderByDescending(d => d.Name.Length))
+            {
+                if (IsWholeWordMatch(addressText, dc.Name))
+                    return dc.DistrictId;
+            }
+
+            // 2) Base-name match (first word of multi-word names, e.g. "Slanica" from "Slanica I")
+            //    If multiple districts share a base name, pick the nearest by coordinates.
+            var baseMatches = DistrictCenters
+                .Where(dc =>
+                {
+                    var baseName = dc.Name.Split(' ')[0];
+                    return baseName.Length >= 4
+                        && baseName != dc.Name
+                        && IsWholeWordMatch(addressText, baseName);
+                })
+                .ToList();
+
+            if (baseMatches.Count > 0)
+            {
+                return baseMatches
+                    .OrderBy(d => Math.Pow(d.Lat - lat, 2) + Math.Pow(d.Lng - lng, 2))
+                    .First()
+                    .DistrictId;
+            }
+        }
+
         var nearest = DistrictCenters
             .OrderBy(d => Math.Pow(d.Lat - lat, 2) + Math.Pow(d.Lng - lng, 2))
             .First();
 
         return nearest.DistrictId;
+    }
+
+    private static bool IsWholeWordMatch(string text, string word)
+    {
+        var pattern = @"\b" + Regex.Escape(word) + @"\b";
+        return Regex.IsMatch(text, pattern, RegexOptions.IgnoreCase);
     }
 }

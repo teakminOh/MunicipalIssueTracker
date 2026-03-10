@@ -184,5 +184,55 @@ public class ClassificationServiceTests : IDisposable
         Assert.InRange(result, 1, 9);
     }
 
+    [Fact]
+    public void ClassifyDistrict_AddressContainsDistrictName_OverridesCoordinates()
+    {
+        // Coordinates are nearest to Predmostie (district 4), but address says Čerchle (district 3)
+        Assert.Equal(3, _classifier.ClassifyDistrict(49.4095, 19.4780, "Ulica 123, Čerchle"));
+    }
+
+    [Fact]
+    public void ClassifyDistrict_AddressContainsDistrictName_CaseInsensitive()
+    {
+        Assert.Equal(3, _classifier.ClassifyDistrict(49.4095, 19.4780, "ulica na ČERCHLE 5"));
+    }
+
+    [Fact]
+    public void ClassifyDistrict_AddressWithNoDistrictName_FallsBackToCoordinates()
+    {
+        // Address has no district name, should use coordinate-based fallback
+        Assert.Equal(4, _classifier.ClassifyDistrict(49.4095, 19.4780, "Some random address 42"));
+    }
+
+    [Fact]
+    public void ClassifyDistrict_NullAddress_FallsBackToCoordinates()
+    {
+        Assert.Equal(4, _classifier.ClassifyDistrict(49.4095, 19.4780, null));
+    }
+
+    [Fact]
+    public void ClassifyDistrict_AddressSlanicaWithoutSuffix_MatchesNearestSlanicaDistrict()
+    {
+        // Address says "Slanica" without I/II — should match one of the Slanica districts
+        // using coordinates to break the tie. Coordinates are nearest to Slanica I (district 7).
+        Assert.Equal(7, _classifier.ClassifyDistrict(49.4130, 19.4720, "Slanica, ulica 5"));
+    }
+
+    [Fact]
+    public void ClassifyDistrict_AddressSlanicaII_ExactMatch()
+    {
+        // Full name "Slanica II" appears in address — exact match to district 8
+        Assert.Equal(8, _classifier.ClassifyDistrict(49.4075, 19.4838, "Slanica II, hlavná 10"));
+    }
+
+    [Fact]
+    public void ClassifyDistrict_AddressContainsStredneDoesNotMatchStred()
+    {
+        // "Stredné Slovensko" should NOT match district "Stred" — word boundary check
+        // Address explicitly says "Brehy", so district 2 is correct.
+        Assert.Equal(2, _classifier.ClassifyDistrict(49.4050, 19.4770,
+            "Severná, Námestovo - Brehy, Námestovo, okres Námestovo, Žilinský kraj, Stredné Slovensko, 029 01, Slovensko"));
+    }
+
     public void Dispose() => _db.Dispose();
 }

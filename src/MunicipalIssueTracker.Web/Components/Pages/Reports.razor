@@ -8,72 +8,132 @@
 <h3 class="rz-mb-4">Reports</h3>
 
 <RadzenStack Gap="24">
-    @* Report 1: Issues by District and Status *@
+    @* Report 1: Open Issues by District — simple column chart *@
     <RadzenCard>
-        <h5>Issues by District and Status</h5>
-        <p class="rz-text-body2 rz-color-secondary">SQL: INNER JOIN Districts, Statuses + GROUP BY</p>
-        @if (_districtStatusCounts.Any())
+        <h5>Open Issues by District</h5>
+        @if (_openByDistrict.Any())
         {
-            <RadzenChart Style="height:300px; min-height:200px; width:100%;">
-                @foreach (var district in _districtStatusCounts.Select(x => x.DistrictName).Distinct())
-                {
-                    var districtData = _districtStatusCounts.Where(x => x.DistrictName == district).ToList();
-                    <RadzenColumnSeries Data="@districtData" CategoryProperty="StatusName" ValueProperty="IssueCount" Title="@district" />
-                }
-                <RadzenCategoryAxis />
-                <RadzenValueAxis />
-                <RadzenLegend Position="LegendPosition.Bottom" />
+            <RadzenChart Style="height:350px; min-height:250px; width:100%;">
+                <RadzenColumnSeries Data="@_openByDistrict"
+                                    CategoryProperty="DistrictName"
+                                    ValueProperty="IssueCount"
+                                    Title="Open Issues" />
+                <RadzenCategoryAxis>
+                    <RadzenAxisTitle Text="District" />
+                </RadzenCategoryAxis>
+                <RadzenValueAxis Min="0">
+                    <RadzenAxisTitle Text="Issues" />
+                </RadzenValueAxis>
             </RadzenChart>
+
+            <details class="rz-mt-4">
+                <summary class="rz-text-body2" style="cursor:pointer;">Show data table</summary>
+                <RadzenDataGrid TItem="DistrictIssueCount"
+                                Data="@_openByDistrict"
+                                AllowSorting="true"
+                                Style="max-height:300px;"
+                                class="rz-mt-2">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="DistrictIssueCount" Property="DistrictName" Title="District" />
+                        <RadzenDataGridColumn TItem="DistrictIssueCount" Property="IssueCount" Title="Open Issues" Width="120px" />
+                    </Columns>
+                </RadzenDataGrid>
+            </details>
         }
     </RadzenCard>
 
-    @* Report 2: Issues by Category and Priority *@
+    @* Report 2: Issues by Category — horizontal bar chart *@
+    <RadzenCard>
+        <h5>Issues by Category</h5>
+        @if (_byCategory.Any())
+        {
+            <RadzenChart Style="height:350px; min-height:250px; width:100%;">
+                <RadzenBarSeries Data="@_byCategory"
+                                 CategoryProperty="CategoryName"
+                                 ValueProperty="IssueCount"
+                                 Title="Total Issues" />
+                <RadzenCategoryAxis />
+                <RadzenValueAxis Min="0">
+                    <RadzenAxisTitle Text="Issues" />
+                </RadzenValueAxis>
+            </RadzenChart>
+
+            <details class="rz-mt-4">
+                <summary class="rz-text-body2" style="cursor:pointer;">Show data table</summary>
+                <RadzenDataGrid TItem="CategoryIssueCount"
+                                Data="@_byCategory"
+                                AllowSorting="true"
+                                Style="max-height:300px;"
+                                class="rz-mt-2">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="CategoryIssueCount" Property="CategoryName" Title="Category" />
+                        <RadzenDataGridColumn TItem="CategoryIssueCount" Property="IssueCount" Title="Issues" Width="100px" />
+                    </Columns>
+                </RadzenDataGrid>
+            </details>
+        }
+    </RadzenCard>
+
+    @* Report 3: Issues by Category and Priority — stacked column for deeper analysis *@
     <RadzenCard>
         <h5>Issues by Category and Priority</h5>
-        <p class="rz-text-body2 rz-color-secondary">SQL: INNER JOIN Categories + GROUP BY Category, Priority</p>
         @if (_categoryPriorityCounts.Any())
         {
-            <RadzenDataGrid TItem="CategoryPriorityCount" Data="@_categoryPriorityCounts" AllowSorting="true">
-                <Columns>
-                    <RadzenDataGridColumn TItem="CategoryPriorityCount" Property="CategoryName" Title="Category" />
-                    <RadzenDataGridColumn TItem="CategoryPriorityCount" Property="Priority" Title="Priority" />
-                    <RadzenDataGridColumn TItem="CategoryPriorityCount" Property="IssueCount" Title="Count" Width="100px" />
-                </Columns>
-            </RadzenDataGrid>
-        }
-    </RadzenCard>
+            <RadzenChart Style="height:380px; min-height:260px; width:100%;">
+                @foreach (var priority in _priorityNames)
+                {
+                    var priorityData = _categoryPriorityCounts
+                        .Where(x => x.Priority == priority)
+                        .OrderBy(x => x.CategoryName)
+                        .ToList();
+                    <RadzenStackedColumnSeries Data="@priorityData"
+                                               CategoryProperty="CategoryName"
+                                               ValueProperty="IssueCount"
+                                               Title="@priority" />
+                }
+                <RadzenCategoryAxis>
+                    <RadzenAxisTitle Text="Category" />
+                </RadzenCategoryAxis>
+                <RadzenValueAxis Min="0">
+                    <RadzenAxisTitle Text="Issues" />
+                </RadzenValueAxis>
+                <RadzenLegend Position="LegendPosition.Bottom" />
+            </RadzenChart>
 
-    @* Report 3: Latest Comment Per Issue *@
-    <RadzenCard>
-        <h5>Latest Comment per Issue</h5>
-        <p class="rz-text-body2 rz-color-secondary">SQL: Correlated subquery to find latest comment per issue</p>
-        @if (_latestComments.Any())
-        {
-            <RadzenDataGrid TItem="LatestCommentReport" Data="@_latestComments" AllowSorting="true">
-                <Columns>
-                    <RadzenDataGridColumn TItem="LatestCommentReport" Title="Issue" Width="200px">
-                        <Template Context="item">
-                            <a href="/issues/@item.IssueId">@item.IssueTitle</a>
-                        </Template>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="LatestCommentReport" Property="LatestComment" Title="Last Comment" />
-                    <RadzenDataGridColumn TItem="LatestCommentReport" Property="AuthorName" Title="By" Width="150px" />
-                    <RadzenDataGridColumn TItem="LatestCommentReport" Property="CommentedAt" Title="Date" Width="150px" FormatString="{0:yyyy-MM-dd HH:mm}" />
-                </Columns>
-            </RadzenDataGrid>
+            <details class="rz-mt-4">
+                <summary class="rz-text-body2" style="cursor:pointer;">Show data table</summary>
+                <RadzenDataGrid TItem="CategoryPriorityCount"
+                                Data="@_categoryPriorityCounts.Where(x => x.IssueCount > 0)"
+                                AllowSorting="true"
+                                Style="max-height:300px;"
+                                class="rz-mt-2">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="CategoryPriorityCount" Property="CategoryName" Title="Category" />
+                        <RadzenDataGridColumn TItem="CategoryPriorityCount" Property="Priority" Title="Priority" />
+                        <RadzenDataGridColumn TItem="CategoryPriorityCount" Property="IssueCount" Title="Count" Width="100px" />
+                    </Columns>
+                </RadzenDataGrid>
+            </details>
         }
     </RadzenCard>
 </RadzenStack>
 
 @code {
-    private List<DistrictStatusCount> _districtStatusCounts = new();
+    private List<DistrictIssueCount> _openByDistrict = new();
+    private List<CategoryIssueCount> _byCategory = new();
     private List<CategoryPriorityCount> _categoryPriorityCounts = new();
-    private List<LatestCommentReport> _latestComments = new();
+    private List<string> _priorityNames = new();
 
     protected override async Task OnInitializedAsync()
     {
-        _districtStatusCounts = await ReportingService.GetIssueCountsByDistrictAndStatusAsync();
+        _openByDistrict = await ReportingService.GetOpenIssueCountsByDistrictAsync();
+        _byCategory = await ReportingService.GetIssueCountsByCategoryAsync();
         _categoryPriorityCounts = await ReportingService.GetIssueCountsByCategoryAndPriorityAsync();
-        _latestComments = await ReportingService.GetLatestCommentPerIssueAsync();
+
+        _priorityNames = _categoryPriorityCounts
+            .OrderBy(x => x.PriorityOrder)
+            .Select(x => x.Priority)
+            .Distinct()
+            .ToList();
     }
 }

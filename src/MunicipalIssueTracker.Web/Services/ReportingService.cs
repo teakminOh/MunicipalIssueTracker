@@ -16,19 +16,19 @@ public class ReportingService
 
     /// <summary>
     /// Issue counts grouped by district and status.
-    /// Demonstrates: JOIN + GROUP BY + aggregate SQL thinking.
-    /// Uses raw SQL via FromSqlRaw to explicitly show SQL competency.
+    /// Uses CROSS JOIN to produce all district×status combinations (including 0-count),
+    /// then LEFT JOIN to Issues to count actual issues per combination.
     /// </summary>
     public async Task<List<DistrictStatusCount>> GetIssueCountsByDistrictAndStatusAsync()
     {
-        // Explicit SQL to demonstrate JOIN + GROUP BY knowledge
         var sql = @"
-            SELECT d.Name AS DistrictName, s.Name AS StatusName, COUNT(*) AS IssueCount
-            FROM Issues i
-            INNER JOIN Districts d ON i.DistrictId = d.DistrictId
-            INNER JOIN Statuses s ON i.StatusId = s.StatusId
-            GROUP BY d.Name, s.Name
-            ORDER BY d.Name, s.Name";
+            SELECT d.Name AS DistrictName, s.Name AS StatusName,
+                   COUNT(i.IssueId) AS IssueCount, s.SortOrder AS StatusSortOrder
+            FROM Districts d
+            CROSS JOIN Statuses s
+            LEFT JOIN Issues i ON i.DistrictId = d.DistrictId AND i.StatusId = s.StatusId
+            GROUP BY d.Name, s.Name, s.SortOrder
+            ORDER BY d.Name, s.SortOrder";
 
         using var connection = _db.Database.GetDbConnection();
         await connection.OpenAsync();
@@ -43,7 +43,8 @@ public class ReportingService
             {
                 DistrictName = reader.GetString(0),
                 StatusName = reader.GetString(1),
-                IssueCount = reader.GetInt32(2)
+                IssueCount = reader.GetInt32(2),
+                StatusSortOrder = reader.GetInt32(3)
             });
         }
         return results;
@@ -51,16 +52,24 @@ public class ReportingService
 
     /// <summary>
     /// Issues by category with priority breakdown.
-    /// Demonstrates: GROUP BY with multiple dimensions.
+    /// Uses CROSS JOIN to produce all category×priority combinations (including 0-count).
+    /// Priority enum values are enumerated via a CTE.
     /// </summary>
     public async Task<List<CategoryPriorityCount>> GetIssueCountsByCategoryAndPriorityAsync()
     {
         var sql = @"
-            SELECT c.Name AS CategoryName, i.Priority, COUNT(*) AS IssueCount
-            FROM Issues i
-            INNER JOIN Categories c ON i.CategoryId = c.CategoryId
-            GROUP BY c.Name, i.Priority
-            ORDER BY c.Name, i.Priority";
+            WITH Priorities(Priority, PriorityOrder) AS (
+                SELECT 'Low', 0 UNION ALL
+                SELECT 'Medium', 1 UNION ALL
+                SELECT 'High', 2 UNION ALL
+                SELECT 'Critical', 3
+            )
+            SELECT c.Name AS CategoryName, p.Priority, COUNT(i.IssueId) AS IssueCount, p.PriorityOrder
+            FROM Categories c
+            CROSS JOIN Priorities p
+            LEFT JOIN Issues i ON i.CategoryId = c.CategoryId AND i.Priority = p.Priority
+            GROUP BY c.Name, p.Priority, p.PriorityOrder
+            ORDER BY c.Name, p.PriorityOrder";
 
         using var connection = _db.Database.GetDbConnection();
         await connection.OpenAsync();
@@ -75,7 +84,8 @@ public class ReportingService
             {
                 CategoryName = reader.GetString(0),
                 Priority = reader.GetString(1),
-                IssueCount = reader.GetInt32(2)
+                IssueCount = reader.GetInt32(2),
+                PriorityOrder = reader.GetInt32(3)
             });
         }
         return results;
@@ -137,6 +147,69 @@ public class ReportingService
             CriticalOpenIssues = criticalIssues
         };
     }
+
+    /// <summary>
+    /// Open (non-terminal) issue counts per district.
+    /// LEFT JOIN ensures districts with 0 open issues still appear.
+    /// </summary>
+    public async Task<List<DistrictIssueCount>> GetOpenIssueCountsByDistrictAsync()
+    {
+        var sql = @"
+            SELECT d.Name AS DistrictName, COUNT(i.IssueId) AS IssueCount
+            FROM Districts d
+            LEFT JOIN Issues i ON i.DistrictId = d.DistrictId
+                AND i.StatusId IN (SELECT s.StatusId FROM Statuses s WHERE s.IsTerminal = 0)
+            GROUP BY d.Name
+            ORDER BY COUNT(i.IssueId) DESC";
+
+        using var connection = _db.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        using var reader = await command.ExecuteReaderAsync();
+
+        var results = new List<DistrictIssueCount>();
+        while (await reader.ReadAsync())
+        {
+            results.Add(new DistrictIssueCount
+            {
+                DistrictName = reader.GetString(0),
+                IssueCount = reader.GetInt32(1)
+            });
+        }
+        return results;
+    }
+
+    /// <summary>
+    /// Total issue counts per category, sorted descending.
+    /// LEFT JOIN ensures categories with 0 issues still appear.
+    /// </summary>
+    public async Task<List<CategoryIssueCount>> GetIssueCountsByCategoryAsync()
+    {
+        var sql = @"
+            SELECT c.Name AS CategoryName, COUNT(i.IssueId) AS IssueCount
+            FROM Categories c
+            LEFT JOIN Issues i ON i.CategoryId = c.CategoryId
+            GROUP BY c.Name
+            ORDER BY COUNT(i.IssueId) DESC";
+
+        using var connection = _db.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        using var reader = await command.ExecuteReaderAsync();
+
+        var results = new List<CategoryIssueCount>();
+        while (await reader.ReadAsync())
+        {
+            results.Add(new CategoryIssueCount
+            {
+                CategoryName = reader.GetString(0),
+                IssueCount = reader.GetInt32(1)
+            });
+        }
+        return results;
+    }
 }
 
 // Report DTOs
@@ -145,6 +218,7 @@ public class DistrictStatusCount
     public string DistrictName { get; set; } = "";
     public string StatusName { get; set; } = "";
     public int IssueCount { get; set; }
+    public int StatusSortOrder { get; set; }
 }
 
 public class CategoryPriorityCount
@@ -152,6 +226,7 @@ public class CategoryPriorityCount
     public string CategoryName { get; set; } = "";
     public string Priority { get; set; } = "";
     public int IssueCount { get; set; }
+    public int PriorityOrder { get; set; }
 }
 
 public class LatestCommentReport
@@ -169,4 +244,16 @@ public class DashboardSummary
     public int OpenIssues { get; set; }
     public int ResolvedIssues { get; set; }
     public int CriticalOpenIssues { get; set; }
+}
+
+public class DistrictIssueCount
+{
+    public string DistrictName { get; set; } = "";
+    public int IssueCount { get; set; }
+}
+
+public class CategoryIssueCount
+{
+    public string CategoryName { get; set; } = "";
+    public int IssueCount { get; set; }
 }
