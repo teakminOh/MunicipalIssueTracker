@@ -6,6 +6,10 @@ Built as a realistic portfolio project demonstrating **.NET 8**, **Blazor**, **R
 
 ---
 <img width="1897" height="696" alt="image" src="https://github.com/user-attachments/assets/fc6a5c56-c008-4408-9d58-3e8637811cb2" />
+<img width="1886" height="675" alt="image" src="https://github.com/user-attachments/assets/2d8b46fd-9f89-4310-a97e-f0644c234f08" />
+<img width="1892" height="726" alt="image" src="https://github.com/user-attachments/assets/2843c28b-27cf-4816-8740-77f7f6f22ba5" />
+<img width="1896" height="917" alt="image" src="https://github.com/user-attachments/assets/934817e1-32dd-4c28-80ca-e2a1f09e8e8d" />
+<img width="1023" height="879" alt="image" src="https://github.com/user-attachments/assets/68361cce-8761-477e-9101-92d1df528d3f" />
 
 
 ## Tech Stack
