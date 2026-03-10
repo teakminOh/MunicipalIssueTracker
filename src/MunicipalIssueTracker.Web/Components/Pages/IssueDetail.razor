@@ -117,9 +117,9 @@ else
         </RadzenCard>
 
         @* Right: Map *@
-        <RadzenCard class="responsive-col-side" Style="align-self:flex-start;">
+        <RadzenCard class="responsive-col-side" Style="align-self:flex-start; width:100%;">
             <h5>Location</h5>
-            <div id="issue-detail-map" style="height:300px; width:100%;"></div>
+            <div id="issue-detail-map" style="height:100%; min-height:300px; width:100%;"></div>
             <div class="rz-mt-2 rz-text-body2">@_issue.Lat.ToString("F4"), @_issue.Lng.ToString("F4")</div>
         </RadzenCard>
     </div>

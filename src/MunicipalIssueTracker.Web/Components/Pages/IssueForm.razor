@@ -15,13 +15,25 @@
 
 <h3 class="rz-mb-4">@(_isEdit ? "Edit Issue" : "Create New Issue")</h3>
 
+@if (_validationErrors.Any())
+{
+    <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" class="rz-mb-4" Style="max-width:800px;">
+        <ul style="margin:0; padding-left:20px;">
+            @foreach (var error in _validationErrors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </RadzenAlert>
+}
+
 <RadzenCard class="issue-form-card" Style="max-width:800px;">
     <RadzenStack Gap="16">
-        <RadzenFormField Text="Title">
+        <RadzenFormField Text="Title *">
             <RadzenTextBox @bind-Value="_model.Title" MaxLength="200" Style="width:100%;" />
         </RadzenFormField>
 
-        <RadzenFormField Text="Description">
+        <RadzenFormField Text="Description *">
             <RadzenTextArea @bind-Value="_model.Description" Rows="4" Style="width:100%;" Placeholder="Describe the issue in detail — category and priority will be detected automatically." />
         </RadzenFormField>
 
@@ -78,7 +90,7 @@
         <p style="font-size:0.85rem; color:#6c757d; margin-top:0;">Click on the map or drag the marker to set the issue location.</p>
 
         <div class="location-fields">
-            <RadzenFormField Text="Address" Style="flex:2;">
+            <RadzenFormField Text="Address *" Style="flex:2;">
                 <RadzenTextBox @bind-Value="_model.AddressText" MaxLength="300" Style="width:100%;" />
             </RadzenFormField>
             <RadzenFormField Text="Latitude" Style="flex:1;">
@@ -112,6 +124,12 @@
     private string _searchQuery = "";
     private List<AddressSuggestion> _suggestions = new();
     private CancellationTokenSource? _debounceCts;
+    private List<string> _validationErrors = new();
+
+    // Námestovo center coordinates and max allowed radius
+    private const double NamestovoLat = 49.4075;
+    private const double NamestovoLng = 19.4838;
+    private const double MaxRadiusKm = 6.0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -160,8 +178,44 @@
         }
     }
 
+    private List<string> ValidateForm()
+    {
+        var errors = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(_model.Title) || _model.Title.Trim().Length < 3)
+            errors.Add("Title is required and must be at least 3 characters.");
+
+        if (string.IsNullOrWhiteSpace(_model.Description))
+            errors.Add("Description is required.");
+
+        if (string.IsNullOrWhiteSpace(_model.AddressText))
+            errors.Add("Address is required.");
+
+        var distanceKm = HaversineDistanceKm(_model.Lat, _model.Lng, NamestovoLat, NamestovoLng);
+        if (distanceKm > MaxRadiusKm)
+            errors.Add($"The selected location is {distanceKm:F1} km from Námestovo center. Issues must be within {MaxRadiusKm} km.");
+
+        return errors;
+    }
+
+    private static double HaversineDistanceKm(double lat1, double lng1, double lat2, double lng2)
+    {
+        const double R = 6371.0; // Earth's radius in km
+        var dLat = (lat2 - lat1) * Math.PI / 180.0;
+        var dLng = (lng2 - lng1) * Math.PI / 180.0;
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+              + Math.Cos(lat1 * Math.PI / 180.0) * Math.Cos(lat2 * Math.PI / 180.0)
+              * Math.Sin(dLng / 2) * Math.Sin(dLng / 2);
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        return R * c;
+    }
+
     private async Task OnSubmit()
     {
+        _validationErrors = ValidateForm();
+        if (_validationErrors.Any())
+            return;
+
         var userId = await GetCurrentUserIdAsync();
 
         if (_isEdit)

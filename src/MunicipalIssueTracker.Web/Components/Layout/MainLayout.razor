@@ -1,5 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+@implements IDisposable
 
 <RadzenLayout>
     <RadzenHeader>
@@ -68,6 +70,25 @@
 @code {
     private bool _sidebarExpanded = true;
 
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        try
+        {
+            var width = await JS.InvokeAsync<int>("eval", "window.innerWidth");
+            if (width <= 768 && _sidebarExpanded)
+            {
+                _sidebarExpanded = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch { }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -83,5 +104,10 @@
             }
             catch { }
         }
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }
