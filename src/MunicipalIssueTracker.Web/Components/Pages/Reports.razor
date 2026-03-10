@@ -1,5 +1,5 @@
 @page "/reports"
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Operator,Admin")]
 @rendermode InteractiveServer
 @inject ReportingService ReportingService
 
@@ -14,7 +14,7 @@
         <p class="rz-text-body2 rz-color-secondary">SQL: INNER JOIN Districts, Statuses + GROUP BY</p>
         @if (_districtStatusCounts.Any())
         {
-            <RadzenChart Style="height:300px;">
+            <RadzenChart Style="height:300px; min-height:200px; width:100%;">
                 @foreach (var district in _districtStatusCounts.Select(x => x.DistrictName).Distinct())
                 {
                     var districtData = _districtStatusCounts.Where(x => x.DistrictName == district).ToList();

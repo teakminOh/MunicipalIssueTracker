@@ -1,27 +1,32 @@
 @page "/issues/create"
 @page "/issues/{IssueId:int}/edit"
-@attribute [Authorize(Roles = "Operator,Admin")]
+@attribute [Authorize]
 @rendermode InteractiveServer
 @inject IssueService IssueService
 @inject AuditService AuditService
+@inject IssueClassificationService Classifier
 @inject NavigationManager Nav
 @inject NotificationService Notification
+@inject IJSRuntime JS
+@using System.Security.Claims
+@implements IAsyncDisposable
 
 <PageTitle>@(_isEdit ? "Edit Issue" : "Create Issue") - Municipal Issue Tracker</PageTitle>
 
 <h3 class="rz-mb-4">@(_isEdit ? "Edit Issue" : "Create New Issue")</h3>
 
-<RadzenCard Style="max-width:800px;">
-    <RadzenTemplateForm TItem="IssueFormModel" Data="@_model" Submit="@OnSubmit">
-        <RadzenStack Gap="16">
-            <RadzenFormField Text="Title">
-                <RadzenTextBox @bind-Value="_model.Title" MaxLength="200" Style="width:100%;" />
-            </RadzenFormField>
+<RadzenCard class="issue-form-card" Style="max-width:800px;">
+    <RadzenStack Gap="16">
+        <RadzenFormField Text="Title">
+            <RadzenTextBox @bind-Value="_model.Title" MaxLength="200" Style="width:100%;" />
+        </RadzenFormField>
 
-            <RadzenFormField Text="Description">
-                <RadzenTextArea @bind-Value="_model.Description" Rows="4" Style="width:100%;" />
-            </RadzenFormField>
+        <RadzenFormField Text="Description">
+            <RadzenTextArea @bind-Value="_model.Description" Rows="4" Style="width:100%;" Placeholder="Describe the issue in detail — category and priority will be detected automatically." />
+        </RadzenFormField>
 
+        @if (_isEdit)
+        {
             <RadzenStack Orientation="Orientation.Horizontal" Gap="16" Wrap="FlexWrap.Wrap">
                 <RadzenFormField Text="Category" Style="flex:1;">
                     <RadzenDropDown @bind-Value="_model.CategoryId" Data="@_categories" TextProperty="Name" ValueProperty="CategoryId" Style="width:100%;" />
@@ -36,38 +41,59 @@
                 </RadzenFormField>
             </RadzenStack>
 
-            @if (_isEdit)
-            {
-                <RadzenStack Orientation="Orientation.Horizontal" Gap="16" Wrap="FlexWrap.Wrap">
-                    <RadzenFormField Text="Status" Style="flex:1;">
-                        <RadzenDropDown @bind-Value="_model.StatusId" Data="@_statuses" TextProperty="Name" ValueProperty="StatusId" Style="width:100%;" />
-                    </RadzenFormField>
-
-                    <RadzenFormField Text="Assigned To" Style="flex:1;">
-                        <RadzenDropDown @bind-Value="_model.AssignedToUserId" Data="@_operators" TextProperty="DisplayName" ValueProperty="UserId"
-                                        AllowClear="true" Placeholder="Unassigned" Style="width:100%;" />
-                    </RadzenFormField>
-                </RadzenStack>
-            }
-
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
-                <RadzenFormField Text="Address" Style="flex:2;">
-                    <RadzenTextBox @bind-Value="_model.AddressText" MaxLength="300" Style="width:100%;" />
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="16" Wrap="FlexWrap.Wrap">
+                <RadzenFormField Text="Status" Style="flex:1;">
+                    <RadzenDropDown @bind-Value="_model.StatusId" Data="@_statuses" TextProperty="Name" ValueProperty="StatusId" Style="width:100%;" />
                 </RadzenFormField>
-                <RadzenFormField Text="Latitude" Style="flex:1;">
-                    <RadzenNumeric @bind-Value="_model.Lat" Step="0.0001" Style="width:100%;" />
-                </RadzenFormField>
-                <RadzenFormField Text="Longitude" Style="flex:1;">
-                    <RadzenNumeric @bind-Value="_model.Lng" Step="0.0001" Style="width:100%;" />
+
+                <RadzenFormField Text="Assigned To" Style="flex:1;">
+                    <RadzenDropDown @bind-Value="_model.AssignedToUserId" Data="@_operators" TextProperty="DisplayName" ValueProperty="UserId"
+                                    AllowClear="true" Placeholder="Unassigned" Style="width:100%;" />
                 </RadzenFormField>
             </RadzenStack>
+        }
 
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="8" JustifyContent="JustifyContent.End">
-                <RadzenButton ButtonType="ButtonType.Button" Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => Nav.NavigateTo("/issues"))" />
-                <RadzenButton ButtonType="ButtonType.Submit" Text="@(_isEdit ? "Save Changes" : "Create Issue")" Icon="save" />
-            </RadzenStack>
+        <h4 class="rz-mt-4 rz-mb-2" style="font-size:1rem; font-weight:600;">Location</h4>
+
+        <RadzenFormField Text="Search Address" Style="margin-bottom:8px;">
+            <RadzenTextBox Value="@_searchQuery" Placeholder="Start typing a street or place near Námestovo..." Style="width:100%;"
+                           @oninput="OnSearchInput" />
+        </RadzenFormField>
+
+        @if (_suggestions.Any())
+        {
+            <div style="border:1px solid #dee2e6; border-radius:4px; max-height:160px; overflow-y:auto; margin-bottom:8px;">
+                @foreach (var s in _suggestions)
+                {
+                    <div style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #f0f0f0;"
+                         @onclick="() => SelectSuggestion(s)"
+                         class="suggestion-item">
+                        @s.DisplayName
+                    </div>
+                }
+            </div>
+        }
+
+        <div id="formMap" style="height:300px; border-radius:8px; border:1px solid #dee2e6; margin-bottom:4px; z-index:0;"></div>
+        <p style="font-size:0.85rem; color:#6c757d; margin-top:0;">Click on the map or drag the marker to set the issue location.</p>
+
+        <div class="location-fields">
+            <RadzenFormField Text="Address" Style="flex:2;">
+                <RadzenTextBox @bind-Value="_model.AddressText" MaxLength="300" Style="width:100%;" />
+            </RadzenFormField>
+            <RadzenFormField Text="Latitude" Style="flex:1;">
+                <RadzenNumeric @bind-Value="_model.Lat" Step="0.0001" Style="width:100%;" />
+            </RadzenFormField>
+            <RadzenFormField Text="Longitude" Style="flex:1;">
+                <RadzenNumeric @bind-Value="_model.Lng" Step="0.0001" Style="width:100%;" />
+            </RadzenFormField>
+        </div>
+
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" JustifyContent="JustifyContent.End">
+            <RadzenButton ButtonType="ButtonType.Button" Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => Nav.NavigateTo("/issues"))" />
+            <RadzenButton ButtonType="ButtonType.Button" Text="@(_isEdit ? "Save Changes" : "Create Issue")" Icon="save" Click="@OnSubmit" />
         </RadzenStack>
-    </RadzenTemplateForm>
+    </RadzenStack>
 </RadzenCard>
 
 @code {
@@ -81,9 +107,25 @@
     private List<District> _districts = new();
     private List<User> _operators = new();
     private List<IssuePriority> _priorities = Enum.GetValues<IssuePriority>().ToList();
+    private DotNetObjectReference<IssueForm>? _dotnetRef;
+    private bool _mapInitialized;
+    private string _searchQuery = "";
+    private List<AddressSuggestion> _suggestions = new();
+    private CancellationTokenSource? _debounceCts;
 
     protected override async Task OnInitializedAsync()
     {
+        // Citizens can only create, not edit
+        if (_isEdit && AuthState != null)
+        {
+            var state = await AuthState;
+            if (state.User.IsInRole("Citizen"))
+            {
+                Nav.NavigateTo("/issues");
+                return;
+            }
+        }
+
         _statuses = await IssueService.GetStatusesAsync();
         _categories = await IssueService.GetCategoriesAsync();
         _districts = await IssueService.GetDistrictsAsync();
@@ -112,9 +154,9 @@
             _model.StatusId = _statuses.FirstOrDefault()?.StatusId ?? 1;
             _model.CategoryId = _categories.FirstOrDefault()?.CategoryId ?? 1;
             _model.DistrictId = _districts.FirstOrDefault()?.DistrictId ?? 1;
-            // Default Stockholm area
-            _model.Lat = 59.33;
-            _model.Lng = 18.07;
+            // Default: Námestovo center
+            _model.Lat = 49.41;
+            _model.Lng = 19.48;
         }
     }
 
@@ -154,14 +196,19 @@
         }
         else
         {
+            // Auto-classify category, priority, and district
+            var categoryId = Classifier.ClassifyCategory(_model.Title, _model.Description);
+            var priority = await Classifier.ClassifyPriorityAsync(_model.Title, _model.Description, categoryId);
+            var districtId = Classifier.ClassifyDistrict(_model.Lat, _model.Lng);
+
             var issue = new Issue
             {
                 Title = _model.Title,
                 Description = _model.Description,
-                CategoryId = _model.CategoryId,
+                CategoryId = categoryId,
                 StatusId = _model.StatusId,
-                DistrictId = _model.DistrictId,
-                Priority = _model.Priority,
+                DistrictId = districtId,
+                Priority = priority,
                 Lat = _model.Lat,
                 Lng = _model.Lng,
                 AddressText = _model.AddressText,
@@ -181,6 +228,78 @@
         var state = await AuthState;
         var claim = state.User.FindFirst(ClaimTypes.NameIdentifier);
         return claim != null ? int.Parse(claim.Value) : 1;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotnetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("mapInterop.initFormMap", "formMap", _model.Lat, _model.Lng, _dotnetRef);
+            _mapInitialized = true;
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnMapClicked(double lat, double lng)
+    {
+        _model.Lat = Math.Round(lat, 6);
+        _model.Lng = Math.Round(lng, 6);
+        var address = await JS.InvokeAsync<string>("mapInterop.reverseGeocode", lat, lng);
+        if (!string.IsNullOrEmpty(address))
+            _model.AddressText = address;
+        _suggestions.Clear();
+        StateHasChanged();
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _searchQuery = e.Value?.ToString() ?? "";
+
+        _debounceCts?.Cancel();
+        _debounceCts = new CancellationTokenSource();
+        var token = _debounceCts.Token;
+
+        if (_searchQuery.Length < 3)
+        {
+            _suggestions.Clear();
+            return;
+        }
+
+        try
+        {
+            await Task.Delay(300, token);
+            _suggestions = await JS.InvokeAsync<List<AddressSuggestion>>("mapInterop.searchAddresses", token, _searchQuery) ?? new();
+            StateHasChanged();
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private async Task SelectSuggestion(AddressSuggestion s)
+    {
+        _model.Lat = s.Lat;
+        _model.Lng = s.Lng;
+        _model.AddressText = s.DisplayName;
+        _searchQuery = "";
+        _suggestions.Clear();
+        if (_mapInitialized)
+            await JS.InvokeVoidAsync("mapInterop.updateFormMarker", s.Lat, s.Lng);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { if (_mapInitialized) await JS.InvokeVoidAsync("mapInterop.disposeFormMap"); } catch { }
+        _dotnetRef?.Dispose();
+    }
+
+    private class AddressSuggestion
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("displayName")]
+        public string DisplayName { get; set; } = "";
+        [System.Text.Json.Serialization.JsonPropertyName("lat")]
+        public double Lat { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("lng")]
+        public double Lng { get; set; }
     }
 
     private class IssueFormModel

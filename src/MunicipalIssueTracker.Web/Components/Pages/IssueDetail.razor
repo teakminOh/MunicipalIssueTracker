@@ -7,65 +7,161 @@
 @inject NotificationService Notification
 @inject IJSRuntime JS
 @inject IFileStorage FileStorage
+@inject DialogService DialogService
+@using System.Security.Claims
 @implements IAsyncDisposable
 
 <PageTitle>Issue #@IssueId - Municipal Issue Tracker</PageTitle>
 
-@if (_issue == null)
+@if (_accessDenied)
+{
+    <RadzenText Text="You do not have permission to view this issue." />
+}
+else if (_issue == null)
 {
     <RadzenText Text="Loading..." />
 }
 else
 {
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" class="rz-mb-4">
-        <h3 class="rz-mb-0">Issue #@_issue.IssueId: @_issue.Title</h3>
-        <RadzenButton Text="Edit" Icon="edit" Click="@(() => Nav.NavigateTo($"/issues/{_issue.IssueId}/edit"))" class="rz-ml-auto" />
-        <RadzenButton Text="Back" Icon="arrow_back" ButtonStyle="ButtonStyle.Light" Click="@(() => Nav.NavigateTo("/issues"))" />
-    </RadzenStack>
+    <div class="page-header rz-mb-4">
+        <h3>Issue #@_issue.IssueId: @_issue.Title</h3>
+        <div class="header-actions">
+            @if (!_isCitizen)
+            {
+                <RadzenButton Text="Edit" Icon="edit" Click="@(() => Nav.NavigateTo($"/issues/{_issue.IssueId}/edit"))" />
+            }
+            @if (_isAdmin)
+            {
+                <RadzenButton Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger" Click="@DeleteIssue" />
+            }
+            <RadzenButton Text="Back" Icon="arrow_back" ButtonStyle="ButtonStyle.Light" Click="@(() => Nav.NavigateTo("/issues"))" />
+        </div>
+    </div>
 
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="16" Wrap="FlexWrap.Wrap">
+    <div class="responsive-row">
         @* Left: Issue Details *@
-        <RadzenCard Style="flex:2; min-width:400px;">
+        <RadzenCard class="responsive-col-main">
             <h5>Details</h5>
-            <RadzenStack Gap="8">
-                <div><strong>Status:</strong> <RadzenBadge Text="@_issue.Status?.Name" /></div>
-                <div><strong>Priority:</strong> <RadzenBadge Text="@_issue.Priority.ToString()" /></div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <div><strong>Tracking Code:</strong> <code>@_issue.TrackingCode</code></div>
+                <div><strong>Status:</strong> <RadzenBadge Text="@(_isCitizen ? GetDisplayStatus(_issue.Status?.Name) : _issue.Status?.Name)" BadgeStyle="@GetStatusBadgeStyle(_issue.Status?.Name)" /></div>
+                @if (_isCitizen)
+                {
+                    <div class="rz-mt-2 rz-mb-2">
+                        @{ var citizenSteps = new[] { "Submitted", "Being Processed", "Resolved", "Closed" }; }
+                        @{ var currentStep = GetCitizenStep(_issue.Status?.Name); }
+                        @{ var isRejected = _issue.Status?.Name == "Rejected" || _issue.Status?.Name == "Duplicate"; }
+                        <div class="citizen-timeline">
+                            @for (int i = 0; i < citizenSteps.Length; i++)
+                            {
+                                var step = citizenSteps[i];
+                                var isActive = i <= currentStep && !isRejected;
+                                var isCurrent = i == currentStep && !isRejected;
+                                <div style="display:flex;align-items:center;gap:4px;">
+                                    <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;
+                                        background:@(isActive ? "var(--rz-primary)" : "var(--rz-base-300)");color:@(isActive ? "white" : "var(--rz-text-color)");
+                                        @(isCurrent ? "box-shadow:0 0 0 3px var(--rz-primary-lighter);" : "")">
+                                        @(i + 1)
+                                    </div>
+                                    <span class="rz-text-body2" style="@(isActive ? "font-weight:600;" : "color:var(--rz-text-secondary-color);")">@step</span>
+                                </div>
+                                @if (i < citizenSteps.Length - 1)
+                                {
+                                    <div style="width:24px;height:2px;background:@(i < currentStep && !isRejected ? "var(--rz-primary)" : "var(--rz-base-300)");"></div>
+                                }
+                            }
+                        </div>
+                        @if (isRejected)
+                        {
+                            <div class="rz-mt-1">
+                                <RadzenBadge Text="@GetDisplayStatus(_issue.Status?.Name)" BadgeStyle="BadgeStyle.Danger" />
+                            </div>
+                        }
+                    </div>
+                }
+                @if (!_isCitizen)
+                {
+                    <div><strong>Priority:</strong> <RadzenBadge Text="@_issue.Priority.ToString()" BadgeStyle="@GetPriorityBadgeStyle(_issue.Priority)" /></div>
+                }
                 <div><strong>Category:</strong> @_issue.Category?.Name</div>
                 <div><strong>District:</strong> @_issue.District?.Name</div>
                 <div><strong>Address:</strong> @_issue.AddressText</div>
                 <div><strong>Reported by:</strong> @_issue.CreatedBy?.DisplayName on @_issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
-                <div><strong>Assigned to:</strong> @(_issue.AssignedTo?.DisplayName ?? "Unassigned")</div>
-            </RadzenStack>
+                @if (!_isCitizen)
+                {
+                    <div><strong>Assigned to:</strong> @(_issue.AssignedTo?.DisplayName ?? "Unassigned")</div>
+                }
+                @if (!string.IsNullOrEmpty(_issue.ResolutionNote))
+                {
+                    <div class="rz-p-3 rz-mt-2" style="background:var(--rz-base-100);border-radius:var(--rz-border-radius);border-left:4px solid var(--rz-danger);">
+                        <strong>@(_issue.Status?.Name == "Rejected" ? "Rejection Reason:" : "Resolution Note:")</strong>
+                        <p class="rz-mt-1 rz-mb-0">@_issue.ResolutionNote</p>
+                    </div>
+                }
+            </div>
             <hr />
             <h5>Description</h5>
             <p>@_issue.Description</p>
 
-            @* Quick Status Change *@
-            <AuthorizeView Roles="Operator,Admin">
+            @* Citizen confirmation when issue is Resolved *@
+            @if (_isCitizen && _issue.Status?.Name == "Resolved")
+            {
                 <hr />
-                <h5>Quick Actions</h5>
-                <RadzenStack Orientation="Orientation.Horizontal" Gap="8" Wrap="FlexWrap.Wrap">
-                    <RadzenDropDown @bind-Value="_newStatusId" Data="@_statuses" TextProperty="Name" ValueProperty="StatusId" Style="width:200px;" />
-                    <RadzenDropDown @bind-Value="_newAssignedToUserId" Data="@_operators" TextProperty="DisplayName" ValueProperty="UserId"
-                                    AllowClear="true" Placeholder="Unassigned" Style="width:200px;" />
-                    <RadzenButton Text="Update" Icon="save" Click="@QuickUpdate" />
-                </RadzenStack>
-            </AuthorizeView>
+                <h5>Is this issue resolved?</h5>
+                <p class="rz-text-body2">The operator marked this issue as resolved. Please confirm whether the problem has been fixed.</p>
+                <div class="citizen-confirm-actions">
+                    <RadzenButton Text="Yes, it's fixed" Icon="check_circle" ButtonStyle="ButtonStyle.Success" Click="@CitizenConfirm" />
+                    <RadzenButton Text="No, still an issue" Icon="replay" ButtonStyle="ButtonStyle.Warning" Click="@CitizenReopen" />
+                </div>
+            }
         </RadzenCard>
 
-        @* Right: Map + Audit *@
-        <RadzenStack Style="flex:1; min-width:300px;" Gap="16">
-            <RadzenCard>
-                <h5>Location</h5>
-                <div id="issue-detail-map" style="height:250px; width:100%;"></div>
-                <div class="rz-mt-2 rz-text-body2">@_issue.Lat.ToString("F4"), @_issue.Lng.ToString("F4")</div>
-            </RadzenCard>
+        @* Right: Map *@
+        <RadzenCard class="responsive-col-side" Style="align-self:flex-start;">
+            <h5>Location</h5>
+            <div id="issue-detail-map" style="height:300px; width:100%;"></div>
+            <div class="rz-mt-2 rz-text-body2">@_issue.Lat.ToString("F4"), @_issue.Lng.ToString("F4")</div>
+        </RadzenCard>
+    </div>
 
-            <RadzenCard>
+    @* Quick Actions + Audit Log — full width below the top row *@
+    @if (!_isCitizen)
+    {
+        <div class="responsive-row rz-mt-4" style="flex-direction:column;">
+            @if (!(_issue.Status?.IsTerminal ?? false) && (_allowedStatuses.Any() || _issue.AssignedToUserId == null))
+            {
+                <RadzenCard>
+                    <h5>Quick Actions</h5>
+                    <div class="quick-actions-row">
+                        @if (_allowedStatuses.Any())
+                        {
+                            <RadzenFormField Text="Change Status">
+                                <RadzenDropDown @bind-Value="_newStatusId" Data="@_allowedStatuses" TextProperty="Name" ValueProperty="StatusId" Style="min-width:180px;"
+                                                Change="@(_ => StateHasChanged())" />
+                            </RadzenFormField>
+                        }
+                        <RadzenFormField Text="Assign To">
+                            <RadzenDropDown @bind-Value="_newAssignedToUserId" Data="@_operators" TextProperty="DisplayName" ValueProperty="UserId"
+                                            AllowClear="true" Placeholder="Unassigned" Style="min-width:180px;" />
+                        </RadzenFormField>
+                        <RadzenButton Text="Update" Icon="save" Click="@QuickUpdate" />
+                    </div>
+                    @if (IssueService.StatusRequiresResolutionNote(_newStatusId))
+                    {
+                        <div class="rz-mt-2">
+                            <RadzenFormField Text="Resolution Note (required)" Style="width:100%;">
+                                <RadzenTextBox @bind-Value="_resolutionNote" Placeholder="Reason for resolving / rejecting..." Style="width:100%;" />
+                            </RadzenFormField>
+                        </div>
+                    }
+                </RadzenCard>
+            }
+
+            <RadzenCard Style="max-height:300px; overflow-y:auto;">
                 <h5>Audit Log</h5>
                 @if (_issue.AuditLogs.Any())
                 {
-                    <RadzenStack Gap="4">
+                    <div style="display:flex;flex-direction:column;gap:4px;">
                         @foreach (var log in _issue.AuditLogs)
                         {
                             <div class="rz-text-body2">
@@ -77,15 +173,15 @@ else
                                 }
                             </div>
                         }
-                    </RadzenStack>
+                    </div>
                 }
                 else
                 {
                     <p class="rz-text-body2">No audit history yet.</p>
                 }
             </RadzenCard>
-        </RadzenStack>
-    </RadzenStack>
+        </div>
+    }
 
     @* Comments Section *@
     <RadzenCard class="rz-mt-4">
@@ -99,10 +195,10 @@ else
             </div>
         }
 
-        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" class="rz-mt-3">
-            <RadzenTextBox @bind-Value="_newComment" Placeholder="Add a comment..." Style="flex:1;" />
+        <div class="filter-bar rz-mt-3">
+            <RadzenTextBox @bind-Value="_newComment" Placeholder="Add a comment..." Style="flex:1; min-width:0;" />
             <RadzenButton Text="Post" Icon="send" Click="@PostComment" Disabled="@string.IsNullOrWhiteSpace(_newComment)" />
-        </RadzenStack>
+        </div>
     </RadzenCard>
 
     @* Attachments Section *@
@@ -114,7 +210,7 @@ else
             {
                 <div class="rz-mb-2">
                     <RadzenIcon Icon="attach_file" />
-                    <span>@att.FileName</span>
+                    <a href="/api/attachments/@att.AttachmentId" target="_blank" style="text-decoration:none;">@att.FileName</a>
                     <span class="rz-ml-2 rz-color-secondary rz-text-body2">(@FormatFileSize(att.SizeBytes))</span>
                     <span class="rz-ml-2 rz-color-secondary rz-text-body2">@att.UploadedAt.ToString("yyyy-MM-dd HH:mm")</span>
                 </div>
@@ -125,10 +221,10 @@ else
             <p class="rz-text-body2">No attachments yet.</p>
         }
 
-        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" class="rz-mt-3">
-            <InputFile OnChange="@OnFileSelected" class="form-control" style="max-width:400px;" />
+        <div class="filter-bar rz-mt-3">
+            <InputFile OnChange="@OnFileSelected" class="form-control" style="flex:1; min-width:0;" />
             <RadzenButton Text="Upload" Icon="upload" Click="@UploadAttachment" Disabled="@(_selectedFile == null)" />
-        </RadzenStack>
+        </div>
     </RadzenCard>
 }
 
@@ -138,16 +234,39 @@ else
 
     private Issue? _issue;
     private List<Status> _statuses = new();
+    private List<Status> _allowedStatuses = new();
     private List<User> _operators = new();
     private int _newStatusId;
     private int? _newAssignedToUserId;
     private string _newComment = "";
+    private string _resolutionNote = "";
+    private bool _accessDenied;
+    private bool _isCitizen;
+    private bool _isAdmin;
 
     protected override async Task OnInitializedAsync()
     {
         _statuses = await IssueService.GetStatusesAsync();
         _operators = await IssueService.GetOperatorsAsync();
         await LoadIssue();
+
+        // Check role
+        if (_issue != null && AuthState != null)
+        {
+            var state = await AuthState;
+            _isCitizen = state.User.IsInRole("Citizen");
+            _isAdmin = state.User.IsInRole("Admin");
+            if (_isCitizen)
+            {
+                var idClaim = state.User.FindFirst(ClaimTypes.NameIdentifier);
+                var userId = idClaim != null ? int.Parse(idClaim.Value) : 0;
+                if (_issue.CreatedByUserId != userId)
+                {
+                    _accessDenied = true;
+                    _issue = null;
+                }
+            }
+        }
     }
 
     private bool _disposed;
@@ -172,30 +291,74 @@ else
         {
             _newStatusId = _issue.StatusId;
             _newAssignedToUserId = _issue.AssignedToUserId;
+            _resolutionNote = _issue.ResolutionNote ?? "";
+
+            // Compute allowed next statuses for the dropdown
+            var allowedIds = IssueService.GetAllowedNextStatuses(_issue.StatusId);
+            _allowedStatuses = _statuses.Where(s => allowedIds.Contains(s.StatusId)).ToList();
+            if (_allowedStatuses.Any() && !_allowedStatuses.Any(s => s.StatusId == _newStatusId))
+                _newStatusId = _allowedStatuses.First().StatusId;
         }
     }
 
     private async Task QuickUpdate()
     {
         if (_issue == null) return;
-        var userId = await GetCurrentUserIdAsync();
 
         var statusChanged = _issue.StatusId != _newStatusId;
+
+        // Validate transition
+        if (statusChanged && !IssueService.IsTransitionAllowed(_issue.StatusId, _newStatusId))
+        {
+            Notification.Notify(NotificationSeverity.Error, "Invalid status transition");
+            return;
+        }
+
+        // Require resolution note for Resolved/Rejected
+        if (statusChanged && IssueService.StatusRequiresResolutionNote(_newStatusId) && string.IsNullOrWhiteSpace(_resolutionNote))
+        {
+            Notification.Notify(NotificationSeverity.Warning, "Resolution note is required");
+            return;
+        }
+
+        var userId = await GetCurrentUserIdAsync();
         var assigneeChanged = _issue.AssignedToUserId != _newAssignedToUserId;
 
-        _issue.StatusId = _newStatusId;
-        _issue.AssignedToUserId = _newAssignedToUserId;
+        if (statusChanged)
+            _issue.StatusId = _newStatusId;
+        if (assigneeChanged)
+            _issue.AssignedToUserId = _newAssignedToUserId;
+        if (statusChanged && IssueService.StatusRequiresResolutionNote(_newStatusId))
+            _issue.ResolutionNote = _resolutionNote;
+
         await IssueService.UpdateIssueAsync(_issue);
 
         if (statusChanged)
+        {
+            var statusName = _statuses.FirstOrDefault(s => s.StatusId == _newStatusId)?.Name ?? _newStatusId.ToString();
             await AuditService.LogAsync(_issue.IssueId, userId, "StatusChanged",
-                System.Text.Json.JsonSerializer.Serialize(new { to = _newStatusId }));
+                System.Text.Json.JsonSerializer.Serialize(new { to = statusName }));
+        }
         if (assigneeChanged)
             await AuditService.LogAsync(_issue.IssueId, userId, "Assigned",
                 System.Text.Json.JsonSerializer.Serialize(new { assignedToUserId = _newAssignedToUserId }));
 
         await LoadIssue();
         Notification.Notify(NotificationSeverity.Success, "Issue updated");
+    }
+
+    private async Task DeleteIssue()
+    {
+        var confirmed = await DialogService.Confirm(
+            $"Are you sure you want to delete Issue #{_issue?.IssueId}? This will remove all comments, attachments, and audit logs. This action cannot be undone.",
+            "Delete Issue",
+            new ConfirmOptions { OkButtonText = "Delete", CancelButtonText = "Cancel" });
+
+        if (confirmed != true || _issue == null) return;
+
+        await IssueService.DeleteIssueAsync(_issue.IssueId);
+        Notification.Notify(NotificationSeverity.Success, "Issue deleted");
+        Nav.NavigateTo("/issues");
     }
 
     private async Task PostComment()
@@ -214,6 +377,31 @@ else
         await LoadIssue();
     }
 
+    private async Task CitizenConfirm()
+    {
+        if (_issue == null) return;
+        var userId = await GetCurrentUserIdAsync();
+        _issue.StatusId = 5; // Closed
+        await IssueService.UpdateIssueAsync(_issue);
+        await AuditService.LogAsync(_issue.IssueId, userId, "StatusChanged",
+            System.Text.Json.JsonSerializer.Serialize(new { to = "Closed", by = "citizen confirmation" }));
+        await LoadIssue();
+        Notification.Notify(NotificationSeverity.Success, "Thank you for confirming!");
+    }
+
+    private async Task CitizenReopen()
+    {
+        if (_issue == null) return;
+        var userId = await GetCurrentUserIdAsync();
+        _issue.StatusId = 3; // In Progress — goes back to operator
+        _issue.ResolutionNote = null;
+        await IssueService.UpdateIssueAsync(_issue);
+        await AuditService.LogAsync(_issue.IssueId, userId, "StatusChanged",
+            System.Text.Json.JsonSerializer.Serialize(new { to = "In Progress", by = "citizen dispute" }));
+        await LoadIssue();
+        Notification.Notify(NotificationSeverity.Info, "Issue reopened — the team will take another look");
+    }
+
     private async Task<int> GetCurrentUserIdAsync()
     {
         if (AuthState == null) return 1;
@@ -222,9 +410,68 @@ else
         return claim != null ? int.Parse(claim.Value) : 1;
     }
 
+    // Citizen-facing status display: map internal statuses to public labels
+    private static string GetDisplayStatus(string? status) => status switch
+    {
+        "Confirmed" => "Being Processed",
+        "In Progress" => "Being Processed",
+        "Resolved" => "Resolved",
+        "Rejected" => "Rejected",
+        "Duplicate" => "Closed (Duplicate)",
+        _ => status ?? "Unknown"
+    };
+
+    // Maps internal status to citizen timeline step index (0-3)
+    private static int GetCitizenStep(string? status) => status switch
+    {
+        "Submitted" => 0,
+        "Confirmed" or "In Progress" => 1,
+        "Resolved" => 2,
+        "Closed" => 3,
+        _ => 0
+    };
+
+    private static BadgeStyle GetStatusBadgeStyle(string? status) => status switch
+    {
+        "Submitted" => BadgeStyle.Warning,
+        "Confirmed" => BadgeStyle.Info,
+        "In Progress" => BadgeStyle.Primary,
+        "Resolved" => BadgeStyle.Success,
+        "Closed" => BadgeStyle.Light,
+        "Rejected" => BadgeStyle.Danger,
+        "Duplicate" => BadgeStyle.Secondary,
+        _ => BadgeStyle.Secondary
+    };
+
+    private static BadgeStyle GetPriorityBadgeStyle(IssuePriority priority) => priority switch
+    {
+        IssuePriority.Critical => BadgeStyle.Danger,
+        IssuePriority.High => BadgeStyle.Warning,
+        IssuePriority.Medium => BadgeStyle.Info,
+        IssuePriority.Low => BadgeStyle.Light,
+        _ => BadgeStyle.Secondary
+    };
+
     // Attachment handling
     private IBrowserFile? _selectedFile;
     private static readonly long MaxFileSize = 5 * 1024 * 1024; // 5MB
+
+    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp",
+        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".txt", ".csv"
+    };
+
+    private static readonly HashSet<string> AllowedMimeTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp",
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "text/plain", "text/csv"
+    };
 
     private void OnFileSelected(InputFileChangeEventArgs e)
     {
@@ -234,6 +481,23 @@ else
     private async Task UploadAttachment()
     {
         if (_issue == null || _selectedFile == null) return;
+
+        // Validate file extension
+        var extension = Path.GetExtension(_selectedFile.Name);
+        if (string.IsNullOrEmpty(extension) || !AllowedExtensions.Contains(extension))
+        {
+            Notification.Notify(NotificationSeverity.Error, "File type not allowed",
+                $"Allowed types: {string.Join(", ", AllowedExtensions)}");
+            return;
+        }
+
+        // Validate MIME type
+        if (!AllowedMimeTypes.Contains(_selectedFile.ContentType))
+        {
+            Notification.Notify(NotificationSeverity.Error, "File type not allowed",
+                "The file's content type is not in the accepted list.");
+            return;
+        }
 
         try
         {

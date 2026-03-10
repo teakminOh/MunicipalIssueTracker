@@ -6,8 +6,13 @@ namespace MunicipalIssueTracker.Web.Services;
 public class ReportingService
 {
     private readonly AppDbContext _db;
+    private readonly ILogger<ReportingService> _logger;
 
-    public ReportingService(AppDbContext db) => _db = db;
+    public ReportingService(AppDbContext db, ILogger<ReportingService> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
 
     /// <summary>
     /// Issue counts grouped by district and status.

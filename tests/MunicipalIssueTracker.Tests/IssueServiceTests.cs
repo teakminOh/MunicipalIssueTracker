@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MunicipalIssueTracker.Domain.Entities;
 using MunicipalIssueTracker.Domain.Enums;
 using MunicipalIssueTracker.Infrastructure.Data;
+using MunicipalIssueTracker.Infrastructure.Repositories;
 using MunicipalIssueTracker.Web.Services;
 
 namespace MunicipalIssueTracker.Tests;
@@ -18,13 +21,14 @@ public class IssueServiceTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         SeedTestData();
-        _svc = new IssueService(_db);
+        var repo = new IssueRepository(_db);
+        _svc = new IssueService(repo, NullLogger<IssueService>.Instance);
     }
 
     private void SeedTestData()
     {
         _db.Statuses.AddRange(
-            new Status { StatusId = 1, Name = "Reported", SortOrder = 1 },
+            new Status { StatusId = 1, Name = "Submitted", SortOrder = 1 },
             new Status { StatusId = 2, Name = "In Progress", SortOrder = 3 }
         );
         _db.Categories.Add(new Category { CategoryId = 1, Name = "Pothole", DefaultPriority = IssuePriority.High });
@@ -33,8 +37,8 @@ public class IssueServiceTests : IDisposable
         _db.SaveChanges();
 
         _db.Issues.AddRange(
-            new Issue { Title = "Issue A", CategoryId = 1, StatusId = 1, DistrictId = 1, CreatedByUserId = 1, Lat = 49.41, Lng = 19.48, Priority = IssuePriority.High },
-            new Issue { Title = "Issue B", CategoryId = 1, StatusId = 2, DistrictId = 1, CreatedByUserId = 1, Lat = 49.42, Lng = 19.49, Priority = IssuePriority.Low }
+            new Issue { Title = "Issue A", CategoryId = 1, StatusId = 1, DistrictId = 1, CreatedByUserId = 1, Lat = 49.41, Lng = 19.48, Priority = IssuePriority.High, TrackingCode = "NAM-2026-0001" },
+            new Issue { Title = "Issue B", CategoryId = 1, StatusId = 2, DistrictId = 1, CreatedByUserId = 1, Lat = 49.42, Lng = 19.49, Priority = IssuePriority.Low, TrackingCode = "NAM-2026-0002" }
         );
         _db.SaveChanges();
     }

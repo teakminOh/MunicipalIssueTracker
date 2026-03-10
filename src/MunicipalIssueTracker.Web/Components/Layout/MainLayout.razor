@@ -1,17 +1,26 @@
 ﻿@inherits LayoutComponentBase
+@inject IJSRuntime JS
 
 <RadzenLayout>
     <RadzenHeader>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0" class="rz-p-2">
-            <RadzenSidebarToggle Click="@(() => _sidebarExpanded = !_sidebarExpanded)" />
-            <RadzenLabel Text="Municipal Issue Tracker" class="rz-color-white rz-ml-4" Style="font-size:1.2rem;font-weight:600;" />
-            <div class="rz-ml-auto rz-mr-4">
+        <div class="app-header-content">
+            <AuthorizeView>
+                <RadzenSidebarToggle Click="@(() => _sidebarExpanded = !_sidebarExpanded)" />
+            </AuthorizeView>
+            <RadzenLabel Text="Municipal Issue Tracker" class="rz-color-white rz-ml-4 app-title" Style="font-size:1.2rem;font-weight:600;" />
+            <div class="app-header-user">
                 <AuthorizeView>
                     <Authorized>
                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8">
                             <RadzenLabel Text="@context.User.Identity?.Name" class="rz-color-white" />
                             <RadzenBadge Text="@context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value" BadgeStyle="BadgeStyle.Info" />
-                            <RadzenButton Text="Logout" Click="@Logout" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" />
+                            <form method="post" action="/api/auth/logout">
+                                <AntiforgeryToken />
+                                <button type="submit" class="rz-button rz-button-sm rz-variant-outlined rz-light rz-shade-default"
+                                        style="color:white; border:1px solid rgba(255,255,255,.5); padding:4px 12px; border-radius:4px; font-size:0.85rem; cursor:pointer; background:transparent;">
+                                    Logout
+                                </button>
+                            </form>
                         </RadzenStack>
                     </Authorized>
                     <NotAuthorized>
@@ -19,16 +28,28 @@
                     </NotAuthorized>
                 </AuthorizeView>
             </div>
-        </RadzenStack>
+        </div>
     </RadzenHeader>
-    <RadzenSidebar @bind-Expanded="@_sidebarExpanded">
-        <RadzenPanelMenu>
-            <RadzenPanelMenuItem Text="Dashboard" Path="/" Icon="dashboard" />
-            <RadzenPanelMenuItem Text="Issues" Path="/issues" Icon="list" />
-            <RadzenPanelMenuItem Text="Map" Path="/map" Icon="map" />
-            <RadzenPanelMenuItem Text="Reports" Path="/reports" Icon="bar_chart" />
-        </RadzenPanelMenu>
-    </RadzenSidebar>
+    <AuthorizeView>
+        <Authorized Context="authSidebar">
+            <RadzenSidebar @bind-Expanded="@_sidebarExpanded" ResponsiveBreakpoint="768" Style="transition: all 0.2s ease;">
+                <RadzenPanelMenu>
+                    <AuthorizeView Roles="Operator,Admin">
+                        <RadzenPanelMenuItem Text="Dashboard" Path="/" Icon="dashboard" />
+                    </AuthorizeView>
+                    <AuthorizeView Roles="Citizen">
+                        <RadzenPanelMenuItem Text="My Issues" Path="/issues" Icon="list" />
+                        <RadzenPanelMenuItem Text="Submit Issue" Path="/issues/create" Icon="add_circle" />
+                    </AuthorizeView>
+                    <AuthorizeView Roles="Operator,Admin">
+                        <RadzenPanelMenuItem Text="Issues" Path="/issues" Icon="list" />
+                        <RadzenPanelMenuItem Text="Map" Path="/map" Icon="map" />
+                        <RadzenPanelMenuItem Text="Reports" Path="/reports" Icon="bar_chart" />
+                    </AuthorizeView>
+                </RadzenPanelMenu>
+            </RadzenSidebar>
+        </Authorized>
+    </AuthorizeView>
     <RadzenBody>
         <div class="rz-p-4">
             @Body
@@ -36,9 +57,7 @@
     </RadzenBody>
 </RadzenLayout>
 
-<RadzenDialog />
-<RadzenNotification />
-<RadzenTooltip />
+<RadzenOverlays />
 
 <div id="blazor-error-ui">
     An unhandled error has occurred.
@@ -49,12 +68,20 @@
 @code {
     private bool _sidebarExpanded = true;
 
-    [Inject] private NavigationManager Nav { get; set; } = default!;
-    [Inject] private IJSRuntime JS { get; set; } = default!;
-
-    private async Task Logout()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await JS.InvokeVoidAsync("loginInterop.logout");
-        Nav.NavigateTo("/login", forceLoad: true);
+        if (firstRender)
+        {
+            try
+            {
+                var width = await JS.InvokeAsync<int>("eval", "window.innerWidth");
+                if (width <= 768)
+                {
+                    _sidebarExpanded = false;
+                    StateHasChanged();
+                }
+            }
+            catch { }
+        }
     }
 }

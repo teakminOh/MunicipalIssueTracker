@@ -1,5 +1,5 @@
 @page "/"
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Operator,Admin")]
 @rendermode InteractiveServer
 @inject ReportingService ReportingService
 
@@ -9,28 +9,28 @@
 
 @if (_summary != null)
 {
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="16" class="rz-mb-6" Wrap="FlexWrap.Wrap">
-        <RadzenCard Style="min-width:180px;">
+    <div class="kpi-row rz-mb-6">
+        <RadzenCard>
             <h5 class="rz-color-info">Total Issues</h5>
             <h2>@_summary.TotalIssues</h2>
         </RadzenCard>
-        <RadzenCard Style="min-width:180px;">
+        <RadzenCard>
             <h5 class="rz-color-warning">Open</h5>
             <h2>@_summary.OpenIssues</h2>
         </RadzenCard>
-        <RadzenCard Style="min-width:180px;">
+        <RadzenCard>
             <h5 class="rz-color-success">Resolved / Closed</h5>
             <h2>@_summary.ResolvedIssues</h2>
         </RadzenCard>
-        <RadzenCard Style="min-width:180px;">
+        <RadzenCard>
             <h5 class="rz-color-danger">Critical Open</h5>
             <h2>@_summary.CriticalOpenIssues</h2>
         </RadzenCard>
-    </RadzenStack>
+    </div>
 }
 
-<RadzenStack Orientation="Orientation.Horizontal" Gap="16" Wrap="FlexWrap.Wrap">
-    <RadzenCard Style="flex:1; min-width:400px;">
+<div class="responsive-row">
+    <RadzenCard class="responsive-col-main">
         <h5>Issues by District &amp; Status</h5>
         @if (_districtStatusCounts.Any())
         {
@@ -44,7 +44,7 @@
         }
     </RadzenCard>
 
-    <RadzenCard Style="flex:1; min-width:400px;">
+    <RadzenCard class="responsive-col-side">
         <h5>Latest Comments</h5>
         @if (_latestComments.Any())
         {
@@ -61,7 +61,7 @@
             </RadzenDataGrid>
         }
     </RadzenCard>
-</RadzenStack>
+</div>
 
 @code {
     private DashboardSummary? _summary;

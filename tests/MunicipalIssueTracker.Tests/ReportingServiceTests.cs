@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using MunicipalIssueTracker.Domain.Entities;
 using MunicipalIssueTracker.Domain.Enums;
 using MunicipalIssueTracker.Infrastructure.Data;
@@ -26,7 +27,7 @@ public class ReportingServiceTests : IDisposable
         _db.Database.EnsureCreated();
 
         SeedTestData();
-        _svc = new ReportingService(_db);
+        _svc = new ReportingService(_db, NullLogger<ReportingService>.Instance);
     }
 
     private void SeedTestData()
@@ -46,9 +47,9 @@ public class ReportingServiceTests : IDisposable
         _db.SaveChanges();
 
         _db.Issues.AddRange(
-            new Issue { IssueId = 1, Title = "Hole A", Description = "Desc", DistrictId = 1, CategoryId = 1, StatusId = 1, Priority = IssuePriority.High, Lat = 49.41, Lng = 19.48, AddressText = "Addr", CreatedByUserId = 1, CreatedAt = DateTime.UtcNow },
-            new Issue { IssueId = 2, Title = "Hole B", Description = "Desc", DistrictId = 1, CategoryId = 1, StatusId = 2, Priority = IssuePriority.Low, Lat = 49.41, Lng = 19.48, AddressText = "Addr", CreatedByUserId = 1, CreatedAt = DateTime.UtcNow },
-            new Issue { IssueId = 3, Title = "Tag C", Description = "Desc", DistrictId = 2, CategoryId = 2, StatusId = 1, Priority = IssuePriority.Critical, Lat = 49.40, Lng = 19.49, AddressText = "Addr", CreatedByUserId = 1, CreatedAt = DateTime.UtcNow }
+            new Issue { IssueId = 1, Title = "Hole A", Description = "Desc", DistrictId = 1, CategoryId = 1, StatusId = 1, Priority = IssuePriority.High, Lat = 49.41, Lng = 19.48, AddressText = "Addr", CreatedByUserId = 1, CreatedAt = DateTime.UtcNow, TrackingCode = "NAM-2026-0001" },
+            new Issue { IssueId = 2, Title = "Hole B", Description = "Desc", DistrictId = 1, CategoryId = 1, StatusId = 2, Priority = IssuePriority.Low, Lat = 49.41, Lng = 19.48, AddressText = "Addr", CreatedByUserId = 1, CreatedAt = DateTime.UtcNow, TrackingCode = "NAM-2026-0002" },
+            new Issue { IssueId = 3, Title = "Tag C", Description = "Desc", DistrictId = 2, CategoryId = 2, StatusId = 1, Priority = IssuePriority.Critical, Lat = 49.40, Lng = 19.49, AddressText = "Addr", CreatedByUserId = 1, CreatedAt = DateTime.UtcNow, TrackingCode = "NAM-2026-0003" }
         );
         _db.SaveChanges();
 

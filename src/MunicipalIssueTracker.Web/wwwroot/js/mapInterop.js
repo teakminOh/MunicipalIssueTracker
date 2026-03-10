@@ -37,6 +37,7 @@ window.mapInterop = {
 
             if (!markers || !markers.length) return;
 
+            var self = this;
             markers.forEach(function (m) {
                 var color = m.priority === 'Critical' ? '#dc3545' :
                     m.priority === 'High' ? '#fd7e14' :
@@ -56,7 +57,7 @@ window.mapInterop = {
                     '<span>Priority: ' + m.priority + '</span><br/>' +
                     '<a href="/issues/' + m.id + '">View Details →</a>'
                 );
-                marker.addTo(this._markersLayer);
+                marker.addTo(self._markersLayer);
             });
 
             var group = L.featureGroup(this._markersLayer.getLayers());
@@ -102,6 +103,96 @@ window.mapInterop = {
     disposeDetailMap: function () {
         try {
             if (this._detailMap) { this._detailMap.off(); this._detailMap.remove(); this._detailMap = null; }
+        } catch (e) { }
+    },
+
+    // --- Form Map Picker ---
+    _formMap: null,
+    _formMarker: null,
+    _dotnetRef: null,
+
+    initFormMap: function (elementId, lat, lng, dotnetRef) {
+        try {
+            if (this._formMap) {
+                this._formMap.off();
+                this._formMap.remove();
+                this._formMap = null;
+            }
+            this._dotnetRef = dotnetRef;
+            var container = document.getElementById(elementId);
+            if (!container) return;
+            if (container._leaflet_id) {
+                container._leaflet_id = null;
+                container.innerHTML = '';
+            }
+            this._formMap = L.map(elementId).setView([lat, lng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(this._formMap);
+            this._formMarker = L.marker([lat, lng], { draggable: true }).addTo(this._formMap);
+
+            var self = this;
+            this._formMap.on('click', function (e) {
+                self._formMarker.setLatLng(e.latlng);
+                if (self._dotnetRef) {
+                    self._dotnetRef.invokeMethodAsync('OnMapClicked', e.latlng.lat, e.latlng.lng);
+                }
+            });
+            this._formMarker.on('dragend', function (e) {
+                var pos = e.target.getLatLng();
+                if (self._dotnetRef) {
+                    self._dotnetRef.invokeMethodAsync('OnMapClicked', pos.lat, pos.lng);
+                }
+            });
+        } catch (e) {
+            console.warn('mapInterop.initFormMap error:', e);
+        }
+    },
+
+    updateFormMarker: function (lat, lng) {
+        try {
+            if (this._formMarker && this._formMap) {
+                this._formMarker.setLatLng([lat, lng]);
+                this._formMap.setView([lat, lng], this._formMap.getZoom());
+            }
+        } catch (e) { }
+    },
+
+    reverseGeocode: async function (lat, lng) {
+        try {
+            var resp = await fetch(
+                'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&zoom=18&addressdetails=1',
+                { headers: { 'Accept-Language': 'sk', 'User-Agent': 'MunicipalIssueTracker/1.0' } }
+            );
+            var data = await resp.json();
+            return data.display_name || '';
+        } catch (e) {
+            return '';
+        }
+    },
+
+    searchAddresses: async function (query) {
+        try {
+            var resp = await fetch(
+                'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query) +
+                '&viewbox=19.35,49.45,19.60,49.35&bounded=1&limit=5&addressdetails=1',
+                { headers: { 'Accept-Language': 'sk', 'User-Agent': 'MunicipalIssueTracker/1.0' } }
+            );
+            var data = await resp.json();
+            return data.map(function (item) {
+                return { displayName: item.display_name, lat: parseFloat(item.lat), lng: parseFloat(item.lon) };
+            });
+        } catch (e) {
+            return [];
+        }
+    },
+
+    disposeFormMap: function () {
+        try {
+            if (this._formMap) { this._formMap.off(); this._formMap.remove(); this._formMap = null; }
+            this._formMarker = null;
+            this._dotnetRef = null;
         } catch (e) { }
     }
 };

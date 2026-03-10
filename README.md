@@ -43,7 +43,7 @@ Clean Architecture with pragmatic 3-layer separation:
 ### Core
 - **Issue CRUD** — Create, edit, view, and manage municipal issues
 - **Radzen DataGrid** — Sortable, pageable, filterable issue list
-- **Status workflow** — Reported → Confirmed → In Progress → Resolved → Closed
+- **Status workflow** — Submitted → Confirmed → In Progress → Resolved → Closed (+ Rejected / Duplicate)
 - **Assignment** — Assign issues to operators
 - **Comments** — Add comments to issues with audit trail
 - **Audit logging** — Track all changes with JSON details
@@ -65,7 +65,7 @@ Clean Architecture with pragmatic 3-layer separation:
 - Cookie-based authentication with roles:
   - **Admin** — Full access
   - **Operator** — Can manage and update issues
-  - **Viewer** — Read-only access
+  - **Citizen** — Submit issues, track own submissions
 
 ## Getting Started
 
@@ -100,7 +100,7 @@ The database is automatically created and seeded on first run.
 | Admin | admin@namestovo.sk | Admin123! |
 | Operator | jan.kovac@namestovo.sk | Operator123! |
 | Operator | maria.horvathova@namestovo.sk | Operator123! |
-| Viewer | anna.kucerova@namestovo.sk | Viewer123! |
+| Citizen | anna.kucerova@namestovo.sk | Citizen123! |
 
 ### Run Tests
 
@@ -134,7 +134,7 @@ MunicipalIssueTracker/
 
 The domain model includes:
 - **Issues** — Core entity with title, description, coordinates, priority, status
-- **Users** — With roles (Admin, Operator, Viewer)
+- **Users** — With roles (Admin, Operator, Citizen)
 - **Districts** — Municipal districts (Námestovo, Slovakia demo data)
 - **Categories** — Issue types (Pothole, Street Light, Waste, etc.)
 - **Statuses** — Workflow states with sort order

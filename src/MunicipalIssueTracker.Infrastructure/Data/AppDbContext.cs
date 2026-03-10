@@ -53,6 +53,7 @@ public class AppDbContext : DbContext
         {
             e.HasKey(s => s.StatusId);
             e.Property(s => s.Name).HasMaxLength(50).IsRequired();
+            e.Property(s => s.IsTerminal).HasDefaultValue(false);
         });
 
         // Issue
@@ -63,6 +64,9 @@ public class AppDbContext : DbContext
             e.Property(i => i.Description).HasMaxLength(4000);
             e.Property(i => i.AddressText).HasMaxLength(300);
             e.Property(i => i.Priority).HasConversion<string>().HasMaxLength(20);
+            e.Property(i => i.TrackingCode).HasMaxLength(20);
+            e.HasIndex(i => i.TrackingCode).IsUnique();
+            e.Property(i => i.ResolutionNote).HasMaxLength(2000);
 
             e.HasOne(i => i.Category).WithMany(c => c.Issues).HasForeignKey(i => i.CategoryId);
             e.HasOne(i => i.Status).WithMany(s => s.Issues).HasForeignKey(i => i.StatusId);

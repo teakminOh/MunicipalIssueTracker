@@ -1,5 +1,5 @@
 @page "/map"
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Operator,Admin")]
 @rendermode InteractiveServer
 @inject IssueService IssueService
 @inject IJSRuntime JS
@@ -9,12 +9,12 @@
 
 <h3 class="rz-mb-4">Issue Map</h3>
 
-<RadzenStack Orientation="Orientation.Horizontal" Gap="8" class="rz-mb-3" Wrap="FlexWrap.Wrap">
+<div class="filter-bar rz-mb-3">
     <RadzenDropDown @bind-Value="_filterStatusId" Data="@_statuses" TextProperty="Name" ValueProperty="StatusId"
-                    Placeholder="All Statuses" AllowClear="true" Change="@(async _ => await LoadAndRenderMarkers())" Style="width:180px;" />
+                    Placeholder="All Statuses" AllowClear="true" Change="@(async _ => await LoadAndRenderMarkers())" Style="min-width:150px;" />
     <RadzenDropDown @bind-Value="_filterCategoryId" Data="@_categories" TextProperty="Name" ValueProperty="CategoryId"
-                    Placeholder="All Categories" AllowClear="true" Change="@(async _ => await LoadAndRenderMarkers())" Style="width:180px;" />
-</RadzenStack>
+                    Placeholder="All Categories" AllowClear="true" Change="@(async _ => await LoadAndRenderMarkers())" Style="min-width:150px;" />
+</div>
 
 <div id="issues-map" style="height:600px; width:100%; border-radius:var(--rz-border-radius); border:1px solid var(--rz-base-300);"></div>
 

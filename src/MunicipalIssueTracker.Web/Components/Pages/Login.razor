@@ -8,8 +8,8 @@
 
 <PageTitle>Login - Municipal Issue Tracker</PageTitle>
 
-<div style="display:flex; justify-content:center; align-items:center; min-height:60vh;">
-    <RadzenCard Style="width:400px;">
+<div style="display:flex; justify-content:center; align-items:center; min-height:60vh; padding:16px;">
+    <RadzenCard class="login-card" Style="width:400px; max-width:100%;">
         <h4 class="rz-mb-4">Login</h4>
         <RadzenTemplateForm TItem="LoginModel" Data="@_model" Submit="@OnLogin">
             <RadzenStack Gap="16">
@@ -36,7 +36,7 @@
         <div class="rz-text-body2">
             <p><strong>Admin:</strong> admin@namestovo.sk / Admin123!</p>
             <p><strong>Operator:</strong> jan.kovac@namestovo.sk / Operator123!</p>
-            <p><strong>Viewer:</strong> anna.kucerova@namestovo.sk / Viewer123!</p>
+            <p><strong>Citizen:</strong> anna.kucerova@namestovo.sk / Citizen123!</p>
         </div>
     </RadzenCard>
 </div>
@@ -54,11 +54,12 @@
         try
         {
             // Use JS fetch so the browser receives the Set-Cookie header directly
-            var success = await JS.InvokeAsync<bool>("loginInterop.login", _model.Email, _model.Password);
+            var role = await JS.InvokeAsync<string?>("loginInterop.login", _model.Email, _model.Password);
 
-            if (success)
+            if (role != null)
             {
-                Nav.NavigateTo("/", forceLoad: true);
+                var target = role == "Citizen" ? "/issues" : "/";
+                Nav.NavigateTo(target, forceLoad: true);
             }
             else
             {

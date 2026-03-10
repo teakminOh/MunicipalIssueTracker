@@ -3,65 +3,90 @@
 @rendermode InteractiveServer
 @inject IssueService IssueService
 @inject NavigationManager Nav
+@using System.Security.Claims
 
 <PageTitle>Issues - Municipal Issue Tracker</PageTitle>
 
-<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" class="rz-mb-4">
-    <h3 class="rz-mb-0">Issues</h3>
-    <AuthorizeView Roles="Operator,Admin">
-        <RadzenButton Text="New Issue" Icon="add" Click="@(() => Nav.NavigateTo("/issues/create"))" class="rz-ml-auto" />
-    </AuthorizeView>
-</RadzenStack>
+<div class="page-header rz-mb-4">
+    <h3>@(_isCitizen ? "My Issues" : "Issues")</h3>
+    <div class="header-actions">
+        <RadzenButton Text="New Issue" Icon="add" Click="@(() => Nav.NavigateTo("/issues/create"))" />
+    </div>
+</div>
 
-<RadzenStack Orientation="Orientation.Horizontal" Gap="8" class="rz-mb-4" Wrap="FlexWrap.Wrap">
+<div class="filter-bar rz-mb-4">
+    <RadzenTextBox @bind-Value="_searchText" Placeholder="Search by title or tracking code..." Style="min-width:180px; flex:1;"
+                   @onkeyup="@(async (KeyboardEventArgs e) => { if (e.Key == "Enter") await LoadIssues(); })" />
+    <RadzenButton Icon="search" ButtonStyle="ButtonStyle.Light" Click="@(async () => await LoadIssues())" />
+    @if (!_isCitizen)
+    {
     <RadzenDropDown @bind-Value="_filterStatusId" Data="@_statuses" TextProperty="Name" ValueProperty="StatusId"
-                    Placeholder="All Statuses" AllowClear="true" Change="@(async _ => await LoadIssues())" Style="width:180px;" />
+                    Placeholder="All Statuses" AllowClear="true" Change="@(async _ => await LoadIssues())" Style="min-width:150px;" />
     <RadzenDropDown @bind-Value="_filterCategoryId" Data="@_categories" TextProperty="Name" ValueProperty="CategoryId"
-                    Placeholder="All Categories" AllowClear="true" Change="@(async _ => await LoadIssues())" Style="width:180px;" />
+                    Placeholder="All Categories" AllowClear="true" Change="@(async _ => await LoadIssues())" Style="min-width:150px;" />
     <RadzenDropDown @bind-Value="_filterDistrictId" Data="@_districts" TextProperty="Name" ValueProperty="DistrictId"
-                    Placeholder="All Districts" AllowClear="true" Change="@(async _ => await LoadIssues())" Style="width:180px;" />
+                    Placeholder="All Districts" AllowClear="true" Change="@(async _ => await LoadIssues())" Style="min-width:150px;" />
     <RadzenDropDown @bind-Value="_filterPriority" Data="@_priorities" TextProperty="Text" ValueProperty="Value"
-                    Placeholder="All Priorities" AllowClear="true" Change="@(async _ => await LoadIssues())" Style="width:180px;" />
-</RadzenStack>
+                    Placeholder="All Priorities" AllowClear="true" Change="@(async _ => await LoadIssues())" Style="min-width:150px;" />
+    }
+</div>
 
 <RadzenDataGrid TItem="Issue" Data="@_issues" AllowSorting="true" AllowPaging="true" PageSize="10"
                 AllowColumnResize="true" RowClick="@(args => Nav.NavigateTo($"/issues/{args.Data.IssueId}"))">
     <Columns>
+        @if (_isCitizen)
+        {
+        <RadzenDataGridColumn TItem="Issue" Property="TrackingCode" Title="Code" Width="140px" />
+        }
+        else
+        {
         <RadzenDataGridColumn TItem="Issue" Property="IssueId" Title="ID" Width="60px" />
-        <RadzenDataGridColumn TItem="Issue" Property="Title" Title="Title" />
+        }
+        <RadzenDataGridColumn TItem="Issue" Property="Title" Title="Title" MinWidth="100px" />
         <RadzenDataGridColumn TItem="Issue" Title="Category" Width="140px">
             <Template Context="issue">@issue.Category?.Name</Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="Issue" Title="Status" Width="120px">
+        <RadzenDataGridColumn TItem="Issue" Title="Status" Width="140px">
             <Template Context="issue">
-                <RadzenBadge Text="@issue.Status?.Name" BadgeStyle="@GetStatusBadgeStyle(issue.Status?.Name)" />
+                <RadzenBadge Text="@(_isCitizen ? GetDisplayStatus(issue.Status?.Name) : issue.Status?.Name)" BadgeStyle="@GetStatusBadgeStyle(issue.Status?.Name)" />
             </Template>
         </RadzenDataGridColumn>
+        @if (!_isCitizen)
+        {
         <RadzenDataGridColumn TItem="Issue" Title="Priority" Width="100px" SortProperty="Priority">
             <Template Context="issue">
                 <RadzenBadge Text="@issue.Priority.ToString()" BadgeStyle="@GetPriorityBadgeStyle(issue.Priority)" />
             </Template>
         </RadzenDataGridColumn>
+        }
         <RadzenDataGridColumn TItem="Issue" Title="District" Width="120px">
             <Template Context="issue">@issue.District?.Name</Template>
         </RadzenDataGridColumn>
+        @if (!_isCitizen)
+        {
         <RadzenDataGridColumn TItem="Issue" Title="Assigned To" Width="150px">
             <Template Context="issue">@(issue.AssignedTo?.DisplayName ?? "Unassigned")</Template>
         </RadzenDataGridColumn>
+        }
         <RadzenDataGridColumn TItem="Issue" Property="CreatedAt" Title="Created" Width="130px" FormatString="{0:yyyy-MM-dd}" />
     </Columns>
 </RadzenDataGrid>
 
 @code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
     private List<Issue> _issues = new();
     private List<Status> _statuses = new();
     private List<Category> _categories = new();
     private List<District> _districts = new();
+    private bool _isCitizen;
+    private int _currentUserId;
 
     private int? _filterStatusId;
     private int? _filterCategoryId;
     private int? _filterDistrictId;
     private IssuePriority? _filterPriority;
+    private string _searchText = "";
 
     private record PriorityItem(string Text, IssuePriority Value);
     private readonly List<PriorityItem> _priorities = Enum.GetValues<IssuePriority>()
@@ -69,6 +94,14 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (AuthState != null)
+        {
+            var state = await AuthState;
+            _isCitizen = state.User.IsInRole("Citizen");
+            var idClaim = state.User.FindFirst(ClaimTypes.NameIdentifier);
+            if (idClaim != null) _currentUserId = int.Parse(idClaim.Value);
+        }
+
         _statuses = await IssueService.GetStatusesAsync();
         _categories = await IssueService.GetCategoriesAsync();
         _districts = await IssueService.GetDistrictsAsync();
@@ -77,16 +110,32 @@
 
     private async Task LoadIssues()
     {
-        _issues = await IssueService.GetIssuesAsync(_filterStatusId, _filterCategoryId, _filterDistrictId, priority: _filterPriority);
+        _issues = await IssueService.GetIssuesAsync(
+            _filterStatusId, _filterCategoryId, _filterDistrictId,
+            priority: _filterPriority,
+            createdByUserId: _isCitizen ? _currentUserId : null,
+            searchText: _searchText);
     }
+
+    private static string GetDisplayStatus(string? status) => status switch
+    {
+        "Confirmed" => "Being Processed",
+        "In Progress" => "Being Processed",
+        "Resolved" => "Resolved",
+        "Rejected" => "Rejected",
+        "Duplicate" => "Closed (Duplicate)",
+        _ => status ?? "Unknown"
+    };
 
     private static BadgeStyle GetStatusBadgeStyle(string? status) => status switch
     {
-        "Reported" => BadgeStyle.Warning,
+        "Submitted" => BadgeStyle.Warning,
         "Confirmed" => BadgeStyle.Info,
         "In Progress" => BadgeStyle.Primary,
         "Resolved" => BadgeStyle.Success,
         "Closed" => BadgeStyle.Light,
+        "Rejected" => BadgeStyle.Danger,
+        "Duplicate" => BadgeStyle.Secondary,
         _ => BadgeStyle.Secondary
     };
 
